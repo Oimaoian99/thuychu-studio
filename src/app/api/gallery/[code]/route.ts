@@ -24,8 +24,8 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       fields: 'files(id, name)',
     });
     
-    const gocFolder = subfoldersRes.data.files?.find(f => f.name.toUpperCase().includes('GOC'));
-    const suaFolder = subfoldersRes.data.files?.find(f => f.name.toUpperCase().includes('SUA'));
+    const gocFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('GOC'));
+    const suaFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('SUA'));
 
     const formatImage = (file: any) => {
       let url = file.thumbnailLink || '';
@@ -33,8 +33,8 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       return { id: file.id, name: file.name, url: url, downloadUrl: file.webContentLink };
     };
 
-    let rawFiles = [];
-    let editedFiles = [];
+    let rawFiles: any[] = [];
+    let editedFiles: any[] = [];
 
     // 3. Lấy ảnh từ thư mục GOC (Nếu có thư mục con, nếu không lấy ở thư mục gốc)
     const rawTargetId = gocFolder ? gocFolder.id : client.drive_folder_id;
