@@ -4,20 +4,52 @@ import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
   const [clients, setClients] = useState<any[]>([]);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
 
-  // States cho Modal xem ảnh đã chọn
   const [showModal, setShowModal] = useState(false);
   const [modalClientCode, setModalClientCode] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<any[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
 
+  // Kiểm tra trạng thái đăng nhập
   useEffect(() => {
-    fetchClients();
+    const isAuth = localStorage.getItem("admin_authenticated");
+    if (isAuth === "true") {
+      setIsAuthenticated(true);
+      fetchClients();
+    }
   }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        localStorage.setItem("admin_authenticated", "true");
+        setIsAuthenticated(true);
+        fetchClients();
+      } else {
+        alert("Sai mật khẩu!");
+      }
+    } catch (error) {
+      alert("Lỗi kết nối");
+    }
+    setLoginLoading(false);
+  };
 
   const fetchClients = async () => {
     setFetchLoading(true);
@@ -57,7 +89,6 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  // Mở modal và tải ảnh khách đã chọn
   const handleViewPhotos = async (clientId: string, clientCode: string) => {
     setModalClientCode(clientCode);
     setShowModal(true);
@@ -76,16 +107,59 @@ export default function AdminPage() {
     setLoadingPhotos(false);
   };
 
+  // NẾU CHƯA ĐĂNG NHẬP -> HIỂN THỊ FORM ĐĂNG NHẬP
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 relative">
+        <div className="absolute top-4 right-4"><ThemeToggle /></div>
+        <div className="w-full max-w-sm bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
+          <h1 className="text-2xl font-bold text-center mb-6">Đăng nhập Admin</h1>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Mật khẩu</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nhập mật khẩu..."
+                className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-transparent focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full bg-black dark:bg-white text-white dark:text-black font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-colors"
+            >
+              {loginLoading ? "Đang xử lý..." : "Đăng nhập"}
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  // NẾU ĐÃ ĐĂNG NHẬP -> HIỂN THỊ TRANG QUẢN TRỊ
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                localStorage.removeItem("admin_authenticated");
+                setIsAuthenticated(false);
+              }}
+              className="text-sm font-medium text-red-500 hover:underline"
+            >
+              Đăng xuất
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Cột trái */}
           <div className="md:col-span-1">
             <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
               <h2 className="text-xl font-semibold mb-4">Tạo mã mới</h2>
@@ -112,7 +186,6 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Cột phải */}
           <div className="md:col-span-2">
             <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
               <h2 className="text-xl font-semibold mb-4">Danh sách Khách hàng</h2>
@@ -156,7 +229,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Modal hiển thị ảnh đã chọn */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
@@ -181,7 +253,6 @@ export default function AdminPage() {
                     ))}
                   </ul>
                   
-                  {/* Tiện ích copy danh sách file cho Studio */}
                   <button 
                     onClick={() => {
                       const names = selectedPhotos.map(p => p.image_name).join(", ");
