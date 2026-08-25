@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -14,6 +14,9 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<'raw' | 'edited'>('raw');
+  
+  // State cho việc xem ảnh Full màn hình
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -25,7 +28,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           setEditedImages(json.editedFiles || []);
           setClientId(json.clientId);
           setSelected(new Set(json.selectedIds));
-          // Tự động chuyển sang tab Đã sửa nếu có ảnh đã sửa
           if (json.editedFiles && json.editedFiles.length > 0) {
             setActiveTab('edited');
           }
@@ -83,6 +85,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      {/* Header */}
       <div className="sticky top-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 p-3 sm:p-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex justify-between items-center w-full sm:w-auto">
@@ -90,7 +93,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             <div className="sm:hidden"><ThemeToggle /></div>
           </div>
           
-          {/* Tabs */}
           <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-full w-full sm:w-auto">
             <button 
               onClick={() => setActiveTab('raw')}
@@ -110,6 +112,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         </div>
       </div>
 
+      {/* Grid Ảnh */}
       <div className="max-w-6xl mx-auto p-2 sm:p-4 mt-2 sm:mt-4">
         {currentImages.length === 0 ? (
           <div className="text-center text-zinc-500 mt-20 flex flex-col items-center gap-4">
@@ -127,7 +130,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-            {currentImages.map((img) => {
+            {currentImages.map((img, index) => {
               const isSelected = selected.has(img.id);
               return (
                 <div 
@@ -137,14 +140,14 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                   <img
                     src={img.url}
                     alt={img.name}
-                    onClick={() => activeTab === 'raw' && toggleSelect(img.id)}
-                    className={`object-cover w-full h-full transition-transform duration-500 group-hover:scale-105 ${activeTab === 'raw' ? 'cursor-pointer' : ''}`}
+                    onClick={() => setPreviewIndex(index)} // Bấm vào ảnh để xem full màn hình
+                    className="object-cover w-full h-full cursor-zoom-in transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
                   
                   {activeTab === 'raw' && (
                     <div 
-                      onClick={() => toggleSelect(img.id)}
+                      onClick={() => toggleSelect(img.id)} // Bấm vào nút tick tròn để chọn ảnh
                       className={`absolute top-2 right-2 sm:top-3 sm:right-3 w-8 h-8 sm:w-9 sm:h-9 cursor-pointer rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-green-500 border-green-500 text-white' : 'bg-black/30 border-white/80 text-white backdrop-blur-sm hover:bg-black/50 hover:border-white'}`}
                     >
                       <Check size={18} strokeWidth={isSelected ? 3 : 2} />
@@ -170,11 +173,68 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         )}
       </div>
 
+      {/* Trình xem ảnh Full màn hình (Lightbox) */}
+      {previewIndex !== null && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md"
+          onClick={() => setPreviewIndex(null)}
+        >
+          {/* Nút Đóng */}
+          <button 
+            className="absolute top-4 right-4 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors"
+            onClick={() => setPreviewIndex(null)}
+          >
+            <X size={28} />
+          </button>
+
+          {/* Nút Trái */}
+          {previewIndex > 0 && (
+            <button 
+              className="absolute left-2 sm:left-6 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors active:scale-90"
+              onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+            >
+              <ChevronLeft size={36} />
+            </button>
+          )}
+
+          {/* Nút Phải */}
+          {previewIndex < currentImages.length - 1 && (
+            <button 
+              className="absolute right-2 sm:right-6 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors active:scale-90"
+              onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+            >
+              <ChevronRight size={36} />
+            </button>
+          )}
+
+          {/* Ảnh Full màn hình */}
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-12" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={currentImages[previewIndex].url.replace('=w1080', '=w2048')} // Nâng độ phân giải lên siêu nét để xem full màn hình
+              alt={currentImages[previewIndex].name}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            
+            {/* Nút Chọn / Bỏ chọn siêu to nổi bật dưới cùng */}
+            {activeTab === 'raw' && (
+              <button 
+                onClick={() => toggleSelect(currentImages[previewIndex].id)}
+                className={`absolute bottom-6 px-8 py-3 rounded-full text-base sm:text-lg font-bold shadow-2xl transition-transform hover:scale-105 active:scale-95 flex items-center gap-2 ${selected.has(currentImages[previewIndex].id) ? 'bg-green-500 text-white' : 'bg-white text-black'}`}
+              >
+                <Check size={24} strokeWidth={selected.has(currentImages[previewIndex].id) ? 3 : 2} /> 
+                {selected.has(currentImages[previewIndex].id) ? 'Đã Chọn Ảnh Này' : 'Chọn Ảnh Này'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Thanh công cụ Gửi */}
       {activeTab === 'raw' && (
         <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 flex justify-center shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
           <div className="w-full max-w-6xl flex justify-between items-center px-1 sm:px-2">
             <p className="font-medium text-sm sm:text-base text-zinc-700 dark:text-zinc-300">
-              Đã chọn <span className="text-green-600 dark:text-green-500 font-bold text-lg sm:text-xl px-1">{selected.size}</span> ảnh
+              Đã chọn <span className="text-green-600 dark:text-green-500 font-bold text-lg sm:text-xl px-1">{selected.size}/5</span> ảnh
             </p>
             <button 
               onClick={handleSave}
