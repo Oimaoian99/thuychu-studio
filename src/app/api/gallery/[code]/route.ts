@@ -36,6 +36,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
         id: file.id,
         name: file.name,
         url: url,
+        downloadUrl: file.webContentLink // Link tải trực tiếp từ Drive
       };
     }) || [];
 
