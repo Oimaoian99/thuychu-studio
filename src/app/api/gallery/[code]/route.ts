@@ -18,27 +18,42 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       return NextResponse.json({ error: 'Mã khách hàng không tồn tại' }, { status: 404 });
     }
 
-    // 2. Lấy danh sách ảnh từ thư mục Google Drive của khách hàng đó
-    const driveRes = await drive.files.list({
-      q: `'${client.drive_folder_id}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name, thumbnailLink, webContentLink)',
-      pageSize: 500, // Hiển thị tối đa 500 ảnh
+    // 2. Lấy danh sách các thư mục con (GOC và SUA)
+    const subfoldersRes = await drive.files.list({
+      q: `'${client.drive_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
     });
+    
+    const gocFolder = subfoldersRes.data.files?.find(f => f.name.toUpperCase().includes('GOC'));
+    const suaFolder = subfoldersRes.data.files?.find(f => f.name.toUpperCase().includes('SUA'));
 
-    const files = driveRes.data.files?.map(file => {
-      // Mẹo: Đổi độ phân giải ảnh thumbnail của Google Drive từ nhỏ (s220) sang sắc nét (w1080) để xem trên web
+    const formatImage = (file: any) => {
       let url = file.thumbnailLink || '';
-      if (url) {
-        url = url.replace(/=s\d+/, '=w1080');
-      }
+      if (url) url = url.replace(/=s\d+/, '=w1080');
+      return { id: file.id, name: file.name, url: url, downloadUrl: file.webContentLink };
+    };
 
-      return {
-        id: file.id,
-        name: file.name,
-        url: url,
-        downloadUrl: file.webContentLink // Link tải trực tiếp từ Drive
-      };
-    }) || [];
+    let rawFiles = [];
+    let editedFiles = [];
+
+    // 3. Lấy ảnh từ thư mục GOC (Nếu có thư mục con, nếu không lấy ở thư mục gốc)
+    const rawTargetId = gocFolder ? gocFolder.id : client.drive_folder_id;
+    const rawDriveRes = await drive.files.list({
+      q: `'${rawTargetId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'files(id, name, thumbnailLink, webContentLink)',
+      pageSize: 500,
+    });
+    rawFiles = rawDriveRes.data.files?.map(formatImage) || [];
+
+    // 4. Lấy ảnh từ thư mục SUA (nếu có)
+    if (suaFolder) {
+      const suaDriveRes = await drive.files.list({
+        q: `'${suaFolder.id}' in parents and mimeType contains 'image/' and trashed = false`,
+        fields: 'files(id, name, thumbnailLink, webContentLink)',
+        pageSize: 500,
+      });
+      editedFiles = suaDriveRes.data.files?.map(formatImage) || [];
+    }
 
     // 3. Lấy những ảnh đã được khách hàng chọn từ trước (nếu có)
     const { data: selectedImages } = await supabase
@@ -48,7 +63,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
 
     const selectedIds = selectedImages?.map(img => img.image_drive_id) || [];
 
-    return NextResponse.json({ success: true, files, clientId: client.id, selectedIds });
+    return NextResponse.json({ success: true, rawFiles, editedFiles, clientId: client.id, selectedIds });
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });

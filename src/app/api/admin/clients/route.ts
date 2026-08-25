@@ -10,26 +10,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Thiếu mã khách hàng' }, { status: 400 });
     }
 
-    // 1. Tạo thư mục trên Google Drive
-    const folderMetadata = {
-      name: code, // Tên thư mục là mã khách hàng
+    // 1. Tạo thư mục Gốc trên Google Drive (Ví dụ: KHACH-01)
+    const rootMetadata = {
+      name: code,
       mimeType: 'application/vnd.google-apps.folder',
       parents: [process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!],
     };
+    const rootDriveRes = await drive.files.create({ requestBody: rootMetadata, fields: 'id' });
+    const rootFolderId = rootDriveRes.data.id;
 
-    const driveRes = await drive.files.create({
-      requestBody: folderMetadata,
-      fields: 'id',
+    if (!rootFolderId) throw new Error("Không thể tạo thư mục Drive");
+
+    // 2. Tạo 2 thư mục con (GOC và SUA) nằm bên trong thư mục Gốc
+    await drive.files.create({
+      requestBody: { name: 'GOC', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] }
+    });
+    
+    await drive.files.create({
+      requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] }
     });
 
-    const folderId = driveRes.data.id;
-
-    if (!folderId) throw new Error("Không thể tạo thư mục Drive");
-
-    // 2. Lưu thông tin vào Supabase
+    // 3. Lưu thông tin thư mục Gốc vào Supabase (Không cần thay đổi Database)
     const { data, error } = await supabase
       .from('clients')
-      .insert([{ code, drive_folder_id: folderId }])
+      .insert([{ code, drive_folder_id: rootFolderId }])
       .select()
       .single();
 
