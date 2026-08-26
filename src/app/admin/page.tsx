@@ -107,6 +107,24 @@ export default function AdminPage() {
     setLoadingPhotos(false);
   };
 
+  const handleDeleteClient = async (id: string, code: string) => {
+    if (!confirm(`Bạn có CHẮC CHẮN muốn xóa mã đăng nhập của khách [ ${code} ] không?\n\nLưu ý: Dữ liệu trên web sẽ bị xóa sạch, nhưng thư mục gốc trên Google Drive vẫn sẽ được giữ lại an toàn.`)) return;
+    
+    try {
+      const res = await fetch(`/api/admin/clients/${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      
+      if (json.success) {
+        alert("Đã xóa khách hàng thành công!");
+        fetchClients(); // Tải lại danh sách
+      } else {
+        alert("Lỗi khi xóa: " + json.error);
+      }
+    } catch (error) {
+      alert("Lỗi kết nối");
+    }
+  };
+
   // NẾU CHƯA ĐĂNG NHẬP -> HIỂN THỊ FORM ĐĂNG NHẬP
   if (!isAuthenticated) {
     return (
@@ -143,8 +161,13 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div className="flex justify-between items-start sm:items-center mb-8 flex-col sm:flex-row gap-4">
+          <div>
+            <a href="/" className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-black dark:hover:text-white mb-2 transition-colors">
+              ← Quay về Trang chủ
+            </a>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          </div>
           <div className="flex items-center gap-4">
             <button 
               onClick={() => {
@@ -217,6 +240,13 @@ export default function AdminPage() {
                             className="px-3 py-1 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700"
                           >
                             Xem ảnh chọn
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteClient(c.id, c.code)}
+                            className="px-3 py-1 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                            title="Xóa khách hàng"
+                          >
+                            Xóa
                           </button>
                         </div>
                       </div>

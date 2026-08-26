@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home } from "lucide-react";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -57,6 +57,9 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   };
 
   const handleSave = async () => {
+    if (selected.size === 0) {
+      if (!confirm("Bạn chưa chọn bức ảnh nào. Bạn có chắc chắn muốn gửi không?")) return;
+    }
     setSaving(true);
     const selectedImages = rawImages.filter(img => selected.has(img.id));
     
@@ -68,7 +71,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       });
       const json = await res.json();
       if (json.success) {
-        alert("Đã gửi yêu cầu chỉnh sửa cho Studio thành công!");
+        alert(selected.size === 0 ? "Đã gửi thông báo cho Studio thành công!" : "Đã gửi yêu cầu chỉnh sửa cho Studio thành công!");
       } else {
         alert("Lỗi: " + json.error);
       }
@@ -89,7 +92,12 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       <div className="sticky top-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 p-3 sm:p-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex justify-between items-center w-full sm:w-auto">
-            <h1 className="text-lg sm:text-xl font-bold truncate max-w-[200px] sm:max-w-md">Khách: {decodeURIComponent(code)}</h1>
+            <div className="flex items-center gap-3">
+              <a href="/" className="p-2 -ml-2 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white transition-colors" title="Quay về trang chủ">
+                <Home size={22} />
+              </a>
+              <h1 className="text-lg sm:text-xl font-bold truncate max-w-[180px] sm:max-w-md">Khách: {decodeURIComponent(code)}</h1>
+            </div>
             <div className="sm:hidden"><ThemeToggle /></div>
           </div>
           
@@ -238,7 +246,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             </p>
             <button 
               onClick={handleSave}
-              disabled={saving || selected.size === 0}
+              disabled={saving}
               className="bg-black dark:bg-white text-white dark:text-black px-6 sm:px-10 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-bold hover:scale-105 active:scale-95 transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-md"
             >
               {saving ? "Đang gửi..." : "Gửi Studio"}
