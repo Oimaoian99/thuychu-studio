@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'; // CHỐNG LƯU CACHE CỦA VERCEL
 
 export async function POST(req: Request) {
   try {
-    const { code } = await req.json();
+    const { code, max_selections } = await req.json();
 
     if (!code) {
       return NextResponse.json({ error: 'Thiếu mã khách hàng' }, { status: 400 });
@@ -23,19 +23,14 @@ export async function POST(req: Request) {
 
     if (!rootFolderId) throw new Error("Không thể tạo thư mục Drive");
 
-    // 2. Tạo 2 thư mục con (GOC và SUA) nằm bên trong thư mục Gốc
-    await drive.files.create({
-      requestBody: { name: 'GOC', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] }
-    });
-    
-    await drive.files.create({
-      requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] }
-    });
+    // 2. Tạo 2 thư mục con (GOC và SUA)
+    await drive.files.create({ requestBody: { name: 'GOC', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
+    await drive.files.create({ requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
 
-    // 3. Lưu thông tin thư mục Gốc vào Supabase (Không cần thay đổi Database)
+    // 3. Lưu thông tin vào Supabase kèm theo giới hạn ảnh
     const { data, error } = await supabase
       .from('clients')
-      .insert([{ code, drive_folder_id: rootFolderId }])
+      .insert([{ code, drive_folder_id: rootFolderId, max_selections: max_selections || 5 }])
       .select()
       .single();
 

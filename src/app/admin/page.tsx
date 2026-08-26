@@ -11,6 +11,7 @@ export default function AdminPage() {
 
   const [clients, setClients] = useState<any[]>([]);
   const [code, setCode] = useState("");
+  const [maxSelections, setMaxSelections] = useState(5); // Setup số lượng ảnh
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
 
@@ -72,13 +73,14 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.toUpperCase() }),
+        body: JSON.stringify({ code: code.toUpperCase(), max_selections: maxSelections }),
       });
       const json = await res.json();
 
       if (json.success) {
-        alert("Tạo mã khách hàng và thư mục Drive thành công!");
+        alert("Tạo mã khách hàng và setup thư mục thành công!");
         setCode("");
+        setMaxSelections(5); // Reset về 5
         fetchClients();
       } else {
         alert("Lỗi: " + json.error);
@@ -195,7 +197,16 @@ export default function AdminPage() {
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="VD: KHACH-01"
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all uppercase shadow-inner font-mono"
+                    className="w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all uppercase shadow-inner font-mono mb-4"
+                  />
+                  <label className="block text-sm font-medium mb-2 text-zinc-400">Số lượng ảnh tối đa khách được chọn</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={maxSelections}
+                    onChange={(e) => setMaxSelections(Number(e.target.value))}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all shadow-inner font-mono"
                   />
                 </div>
                 <button
@@ -230,7 +241,7 @@ export default function AdminPage() {
                           <p className="font-bold text-xl font-mono text-white flex items-center gap-2">
                             {c.code}
                           </p>
-                          <p className="text-xs text-zinc-500 mt-1 font-mono break-all">ID: {c.drive_folder_id}</p>
+                          <p className="text-xs text-zinc-500 mt-1 font-mono break-all">ID: {c.drive_folder_id} <span className="text-purple-400 font-bold ml-2">• Gói: {c.max_selections || 5} ảnh</span></p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <a 

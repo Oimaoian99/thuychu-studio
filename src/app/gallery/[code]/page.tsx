@@ -16,6 +16,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [activeTab, setActiveTab] = useState<'raw' | 'edited'>('raw');
   
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [maxSelections, setMaxSelections] = useState(5); // Setup mặc định
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -27,6 +28,8 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           setEditedImages(json.editedFiles || []);
           setClientId(json.clientId);
           setSelected(new Set(json.selectedIds));
+          setMaxSelections(json.maxSelections || 5); // Cập nhật giới hạn từ Database
+          
           if (json.editedFiles && json.editedFiles.length > 0) {
             setActiveTab('edited');
           }
@@ -46,8 +49,8 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     if (newSelected.has(id)) {
       newSelected.delete(id);
     } else {
-      if (newSelected.size >= 5) {
-        alert("Gói chụp hiện tại chỉ cho phép chọn tối đa 5 bức ảnh! Vui lòng bỏ chọn ảnh khác trước khi chọn thêm nhé.");
+      if (newSelected.size >= maxSelections) {
+        alert(`Gói chụp hiện tại chỉ cho phép chọn tối đa ${maxSelections} bức ảnh! Vui lòng bỏ chọn ảnh khác trước khi chọn thêm nhé.`);
         return;
       }
       newSelected.add(id);
@@ -118,7 +121,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               onClick={() => setActiveTab('raw')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'raw' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
-              <ImageIcon size={16} /> Ảnh Gốc <span className="opacity-70 font-normal">({selected.size}/5)</span>
+              <ImageIcon size={16} /> Ảnh Gốc <span className="opacity-70 font-normal">({selected.size}/{maxSelections})</span>
             </button>
             <button 
               onClick={() => setActiveTab('edited')}
@@ -249,7 +252,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
           <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
             <p className="font-medium text-sm sm:text-base text-zinc-300">
-              Đã chọn <span className="text-white font-black text-xl px-1">{selected.size}/5</span>
+              Đã chọn <span className="text-white font-black text-xl px-1">{selected.size}/{maxSelections}</span>
             </p>
             <button 
               onClick={handleSave}

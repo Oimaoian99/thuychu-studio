@@ -10,7 +10,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     // 1. Tìm thông tin khách hàng từ Database
     const { data: client, error } = await supabase
       .from('clients')
-      .select('id, drive_folder_id')
+      .select('id, drive_folder_id, max_selections')
       .eq('code', decodedCode)
       .single();
 
@@ -63,7 +63,14 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
 
     const selectedIds = selectedImages?.map(img => img.image_drive_id) || [];
 
-    return NextResponse.json({ success: true, rawFiles, editedFiles, clientId: client.id, selectedIds });
+    return NextResponse.json({ 
+      success: true, 
+      rawFiles, 
+      editedFiles, 
+      clientId: client.id, 
+      selectedIds,
+      maxSelections: client.max_selections || 5 // Mặc định là 5 nếu chưa cài đặt
+    });
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
