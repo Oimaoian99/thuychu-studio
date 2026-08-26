@@ -127,7 +127,6 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-4 right-4 z-20"><ThemeToggle /></div>
         <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
         
         <div className="w-full max-w-sm bg-white/5 backdrop-blur-2xl p-8 rounded-[2rem] shadow-2xl border border-white/10 relative z-10">
@@ -180,8 +179,6 @@ export default function AdminPage() {
             >
               <LogOut size={16} /> Đăng xuất
             </button>
-            <div className="h-4 w-px bg-white/10"></div>
-            <ThemeToggle />
           </div>
         </div>
 
