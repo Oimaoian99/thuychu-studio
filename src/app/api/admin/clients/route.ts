@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { drive } from '@/lib/drive';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic'; // CHỐNG LƯU CACHE CỦA VERCEL
+
 export async function POST(req: Request) {
   try {
     const { code } = await req.json();

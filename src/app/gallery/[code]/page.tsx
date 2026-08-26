@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send } from "lucide-react";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -15,7 +15,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<'raw' | 'edited'>('raw');
   
-  // State cho việc xem ảnh Full màn hình
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -81,38 +80,51 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     setSaving(false);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">Đang tải thư viện ảnh...</div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500 font-medium">{error}</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex items-center justify-center flex-col gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+      <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Đang tải thư viện ảnh</p>
+    </div>
+  );
+  if (error) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-red-400 font-medium">{error}</div>;
 
   const currentImages = activeTab === 'raw' ? rawImages : editedImages;
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 p-3 sm:p-4 shadow-sm">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black pb-32 overflow-x-hidden selection:bg-purple-500/30">
+      
+      {/* Decorative Orbs */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Header Glassmorphism */}
+      <div className="sticky top-0 z-20 bg-black/40 backdrop-blur-2xl border-b border-white/10 p-4 shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-5">
           <div className="flex justify-between items-center w-full sm:w-auto">
             <div className="flex items-center gap-3">
-              <a href="/" className="p-2 -ml-2 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white transition-colors" title="Quay về trang chủ">
-                <Home size={22} />
+              <a href="/" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-all shadow-inner" title="Quay về trang chủ">
+                <Home size={20} />
               </a>
-              <h1 className="text-lg sm:text-xl font-bold truncate max-w-[180px] sm:max-w-md">Khách: {decodeURIComponent(code)}</h1>
+              <h1 className="text-lg sm:text-xl font-extrabold truncate max-w-[180px] sm:max-w-md text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 font-mono">
+                {decodeURIComponent(code)}
+              </h1>
             </div>
             <div className="sm:hidden"><ThemeToggle /></div>
           </div>
           
-          <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-full w-full sm:w-auto">
+          {/* Custom Tabs */}
+          <div className="flex p-1.5 bg-black/50 border border-white/10 rounded-full w-full sm:w-auto backdrop-blur-md shadow-inner">
             <button 
               onClick={() => setActiveTab('raw')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === 'raw' ? 'bg-white dark:bg-zinc-900 shadow text-black dark:text-white' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'raw' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
-              <ImageIcon size={16} /> Ảnh Gốc ({selected.size}/5)
+              <ImageIcon size={16} /> Ảnh Gốc <span className="opacity-70 font-normal">({selected.size}/5)</span>
             </button>
             <button 
               onClick={() => setActiveTab('edited')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === 'edited' ? 'bg-black dark:bg-white shadow text-white dark:text-black' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'edited' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
-              <Sparkles size={16} /> Đã Chỉnh Sửa
+              <Sparkles size={16} /> Đã Sửa
             </button>
           </div>
           
@@ -121,47 +133,47 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       </div>
 
       {/* Grid Ảnh */}
-      <div className="max-w-6xl mx-auto p-2 sm:p-4 mt-2 sm:mt-4">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 mt-2 relative z-10">
         {currentImages.length === 0 ? (
-          <div className="text-center text-zinc-500 mt-20 flex flex-col items-center gap-4">
-            {activeTab === 'edited' ? (
-              <>
-                <Sparkles size={48} className="text-zinc-300 dark:text-zinc-700" />
-                <p>Nhiếp ảnh gia đang xử lý ảnh của bạn. Vui lòng quay lại sau nhé!</p>
-              </>
-            ) : (
-              <>
-                <ImageIcon size={48} className="text-zinc-300 dark:text-zinc-700" />
-                <p>Chưa có ảnh nào trong thư mục này.</p>
-              </>
-            )}
+          <div className="text-center text-zinc-500 mt-32 flex flex-col items-center gap-6">
+            <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
+              {activeTab === 'edited' ? <Sparkles size={40} className="text-purple-400 opacity-50" /> : <ImageIcon size={40} className="text-zinc-600" />}
+            </div>
+            <p className="text-lg font-medium text-zinc-400">
+              {activeTab === 'edited' ? "Nhiếp ảnh gia đang xử lý ảnh của bạn. Trở lại sau nhé!" : "Chưa có ảnh nào trong thư mục này."}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {currentImages.map((img, index) => {
               const isSelected = selected.has(img.id);
               return (
                 <div 
                   key={img.id} 
-                  className={`relative aspect-[3/4] group overflow-hidden rounded-xl sm:rounded-2xl border-[3px] sm:border-4 transition-all duration-200 shadow-sm ${activeTab === 'raw' && isSelected ? 'border-green-500 shadow-md shadow-green-500/20' : 'border-transparent'}`}
+                  className={`relative aspect-[3/4] group overflow-hidden rounded-2xl transition-all duration-300 ${isSelected && activeTab === 'raw' ? 'ring-4 ring-purple-500 ring-offset-4 ring-offset-zinc-950 shadow-[0_0_30px_rgba(168,85,247,0.3)]' : 'border border-white/10 hover:border-white/30'}`}
                 >
+                  {/* Overlay Gradient Darken at bottom for better button visibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" />
+                  
                   <img
                     src={img.url}
                     alt={img.name}
-                    onClick={() => setPreviewIndex(index)} // Bấm vào ảnh để xem full màn hình
-                    className="object-cover w-full h-full cursor-zoom-in transition-transform duration-500 group-hover:scale-105"
+                    onClick={() => setPreviewIndex(index)}
+                    className="object-cover w-full h-full cursor-zoom-in transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                   />
                   
+                  {/* Checkbox siêu đẹp */}
                   {activeTab === 'raw' && (
                     <div 
-                      onClick={() => toggleSelect(img.id)} // Bấm vào nút tick tròn để chọn ảnh
-                      className={`absolute top-2 right-2 sm:top-3 sm:right-3 w-8 h-8 sm:w-9 sm:h-9 cursor-pointer rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-green-500 border-green-500 text-white' : 'bg-black/30 border-white/80 text-white backdrop-blur-sm hover:bg-black/50 hover:border-white'}`}
+                      onClick={() => toggleSelect(img.id)}
+                      className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${isSelected ? 'bg-gradient-to-tr from-purple-500 to-blue-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
                     >
-                      <Check size={18} strokeWidth={isSelected ? 3 : 2} />
+                      <Check size={20} strokeWidth={isSelected ? 3 : 2} />
                     </div>
                   )}
 
+                  {/* Nút Download tinh tế */}
                   {img.downloadUrl && (
                     <a
                       href={img.downloadUrl}
@@ -169,7 +181,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                       rel="noopener noreferrer"
                       download={img.name}
                       title="Tải ảnh gốc về máy"
-                      className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 w-9 h-9 sm:w-10 sm:h-10 bg-white/80 dark:bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white transition-colors shadow-lg active:scale-90"
+                      className="absolute bottom-4 right-4 w-10 h-10 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 sm:translate-y-0 sm:opacity-100"
                     >
                       <Download size={18} strokeWidth={2.5} />
                     </a>
@@ -181,75 +193,74 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         )}
       </div>
 
-      {/* Trình xem ảnh Full màn hình (Lightbox) */}
+      {/* Lightbox - Xem ảnh Full */}
       {previewIndex !== null && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
           onClick={() => setPreviewIndex(null)}
         >
-          {/* Nút Đóng */}
           <button 
-            className="absolute top-4 right-4 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors"
+            className="absolute top-6 right-6 p-3 text-white hover:text-purple-400 z-50 bg-white/5 border border-white/10 rounded-full transition-colors backdrop-blur-md"
             onClick={() => setPreviewIndex(null)}
           >
-            <X size={28} />
+            <X size={24} />
           </button>
 
-          {/* Nút Trái */}
           {previewIndex > 0 && (
             <button 
-              className="absolute left-2 sm:left-6 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors active:scale-90"
+              className="absolute left-4 sm:left-10 p-4 text-white hover:text-purple-400 z-50 bg-white/5 border border-white/10 rounded-full transition-all hover:bg-white/10 active:scale-90 backdrop-blur-md"
               onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
             >
-              <ChevronLeft size={36} />
+              <ChevronLeft size={32} />
             </button>
           )}
 
-          {/* Nút Phải */}
           {previewIndex < currentImages.length - 1 && (
             <button 
-              className="absolute right-2 sm:right-6 p-3 text-white hover:text-gray-300 z-50 bg-black/40 rounded-full transition-colors active:scale-90"
+              className="absolute right-4 sm:right-10 p-4 text-white hover:text-purple-400 z-50 bg-white/5 border border-white/10 rounded-full transition-all hover:bg-white/10 active:scale-90 backdrop-blur-md"
               onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
             >
-              <ChevronRight size={36} />
+              <ChevronRight size={32} />
             </button>
           )}
 
-          {/* Ảnh Full màn hình */}
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-12" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-16" onClick={(e) => e.stopPropagation()}>
             <img 
-              src={currentImages[previewIndex].url.replace('=w1080', '=w2048')} // Nâng độ phân giải lên siêu nét để xem full màn hình
+              src={currentImages[previewIndex].url.replace('=w1080', '=w2048')}
               alt={currentImages[previewIndex].name}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)]"
             />
             
-            {/* Nút Chọn / Bỏ chọn siêu to nổi bật dưới cùng */}
             {activeTab === 'raw' && (
               <button 
                 onClick={() => toggleSelect(currentImages[previewIndex].id)}
-                className={`absolute bottom-6 px-8 py-3 rounded-full text-base sm:text-lg font-bold shadow-2xl transition-transform hover:scale-105 active:scale-95 flex items-center gap-2 ${selected.has(currentImages[previewIndex].id) ? 'bg-green-500 text-white' : 'bg-white text-black'}`}
+                className={`absolute bottom-10 px-10 py-4 rounded-full text-lg font-bold shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-3 border ${selected.has(currentImages[previewIndex].id) ? 'bg-gradient-to-r from-purple-600 to-blue-600 border-transparent text-white shadow-purple-500/40' : 'bg-black/50 backdrop-blur-xl border-white/20 text-white hover:bg-black/70'}`}
               >
                 <Check size={24} strokeWidth={selected.has(currentImages[previewIndex].id) ? 3 : 2} /> 
-                {selected.has(currentImages[previewIndex].id) ? 'Đã Chọn Ảnh Này' : 'Chọn Ảnh Này'}
+                {selected.has(currentImages[previewIndex].id) ? 'ĐÃ CHỌN ẢNH NÀY' : 'CHỌN ẢNH NÀY'}
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Thanh công cụ Gửi */}
+      {/* Nút Gửi Studio Floating Island */}
       {activeTab === 'raw' && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 flex justify-center shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
-          <div className="w-full max-w-6xl flex justify-between items-center px-1 sm:px-2">
-            <p className="font-medium text-sm sm:text-base text-zinc-700 dark:text-zinc-300">
-              Đã chọn <span className="text-green-600 dark:text-green-500 font-bold text-lg sm:text-xl px-1">{selected.size}/5</span> ảnh
+        <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
+          <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
+            <p className="font-medium text-sm sm:text-base text-zinc-300">
+              Đã chọn <span className="text-white font-black text-xl px-1">{selected.size}/5</span>
             </p>
             <button 
               onClick={handleSave}
               disabled={saving}
-              className="bg-black dark:bg-white text-white dark:text-black px-6 sm:px-10 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-bold hover:scale-105 active:scale-95 transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-md"
+              className="bg-white text-black px-6 sm:px-8 py-3 rounded-full text-sm sm:text-base font-bold hover:bg-zinc-200 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 shadow-xl flex items-center gap-2"
             >
-              {saving ? "Đang gửi..." : "Gửi Studio"}
+              {saving ? (
+                <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+              ) : (
+                <><Send size={18} /> Gửi Studio</>
+              )}
             </button>
           </div>
         </div>

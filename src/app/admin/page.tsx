@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Trash2, FolderOpen, Images, LogOut, ArrowLeft } from "lucide-react";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,7 +19,6 @@ export default function AdminPage() {
   const [selectedPhotos, setSelectedPhotos] = useState<any[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
 
-  // Kiểm tra trạng thái đăng nhập
   useEffect(() => {
     const isAuth = localStorage.getItem("admin_authenticated");
     if (isAuth === "true") {
@@ -54,7 +54,7 @@ export default function AdminPage() {
   const fetchClients = async () => {
     setFetchLoading(true);
     try {
-      const res = await fetch("/api/admin/clients");
+      const res = await fetch("/api/admin/clients", { cache: 'no-store' });
       const json = await res.json();
       if (json.success) setClients(json.data);
     } catch (error) {
@@ -115,8 +115,7 @@ export default function AdminPage() {
       const json = await res.json();
       
       if (json.success) {
-        alert("Đã xóa khách hàng thành công!");
-        fetchClients(); // Tải lại danh sách
+        fetchClients(); 
       } else {
         alert("Lỗi khi xóa: " + json.error);
       }
@@ -125,29 +124,30 @@ export default function AdminPage() {
     }
   };
 
-  // NẾU CHƯA ĐĂNG NHẬP -> HIỂN THỊ FORM ĐĂNG NHẬP
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 relative">
-        <div className="absolute top-4 right-4"><ThemeToggle /></div>
-        <div className="w-full max-w-sm bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
-          <h1 className="text-2xl font-bold text-center mb-6">Đăng nhập Admin</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
+      <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute top-4 right-4 z-20"><ThemeToggle /></div>
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+        
+        <div className="w-full max-w-sm bg-white/5 backdrop-blur-2xl p-8 rounded-[2rem] shadow-2xl border border-white/10 relative z-10">
+          <h1 className="text-2xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Đăng nhập Admin</h1>
+          <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Mật khẩu</label>
+              <label className="block text-sm font-medium mb-2 text-zinc-300">Mật khẩu</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Nhập mật khẩu..."
-                className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-transparent focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all shadow-inner"
               />
             </div>
             <button
               type="submit"
               disabled={loginLoading}
-              className="w-full bg-black dark:bg-white text-white dark:text-black font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-colors"
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25"
             >
               {loginLoading ? "Đang xử lý..." : "Đăng nhập"}
             </button>
@@ -157,51 +157,54 @@ export default function AdminPage() {
     );
   }
 
-  // NẾU ĐÃ ĐĂNG NHẬP -> HIỂN THỊ TRANG QUẢN TRỊ
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-start sm:items-center mb-8 flex-col sm:flex-row gap-4">
+    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black p-4 sm:p-8 relative overflow-hidden text-zinc-200">
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="max-w-5xl mx-auto relative z-10">
+        <div className="flex justify-between items-start sm:items-center mb-10 flex-col sm:flex-row gap-4">
           <div>
-            <a href="/" className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-black dark:hover:text-white mb-2 transition-colors">
-              ← Quay về Trang chủ
+            <a href="/" className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white mb-2 transition-colors">
+              <ArrowLeft size={16} /> Quay về Trang chủ
             </a>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Admin Dashboard</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 bg-white/5 p-2 rounded-full border border-white/10 backdrop-blur-md">
             <button 
               onClick={() => {
                 localStorage.removeItem("admin_authenticated");
                 setIsAuthenticated(false);
               }}
-              className="text-sm font-medium text-red-500 hover:underline"
+              className="flex items-center gap-2 text-sm font-medium text-zinc-300 hover:text-red-400 transition-colors px-4 py-1"
             >
-              Đăng xuất
+              <LogOut size={16} /> Đăng xuất
             </button>
+            <div className="h-4 w-px bg-white/10"></div>
             <ThemeToggle />
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
           <div className="md:col-span-1">
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-              <h2 className="text-xl font-semibold mb-4">Tạo mã mới</h2>
-              <form onSubmit={handleCreateClient} className="space-y-4">
+            <div className="bg-white/5 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/10">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">Tạo mã mới</h2>
+              <form onSubmit={handleCreateClient} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Mã khách hàng</label>
+                  <label className="block text-sm font-medium mb-2 text-zinc-400">Mã khách hàng</label>
                   <input
                     type="text"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="VD: KHACH-01"
                     required
-                    className="w-full px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent uppercase focus:ring-2 focus:ring-black dark:focus:ring-white outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all uppercase shadow-inner font-mono"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black py-2 rounded-md font-medium hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50"
                 >
                   {loading ? "Đang tạo..." : "Tạo thư mục & Mã"}
                 </button>
@@ -210,43 +213,49 @@ export default function AdminPage() {
           </div>
 
           <div className="md:col-span-2">
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-              <h2 className="text-xl font-semibold mb-4">Danh sách Khách hàng</h2>
+            <div className="bg-white/5 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/10">
+              <h2 className="text-xl font-bold mb-6">Danh sách Khách hàng</h2>
               
               {fetchLoading ? (
-                <p className="text-zinc-500">Đang tải...</p>
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                </div>
               ) : clients.length === 0 ? (
-                <p className="text-zinc-500">Chưa có khách hàng nào.</p>
+                <div className="text-center py-10 text-zinc-500 bg-black/20 rounded-2xl border border-white/5">
+                  Chưa có khách hàng nào.
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {clients.map((c) => (
-                    <div key={c.id} className="p-4 border border-zinc-100 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                      <div className="flex justify-between items-center mb-3">
+                    <div key={c.id} className="p-5 border border-white/10 bg-black/20 rounded-2xl hover:bg-white/5 transition-all group">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                          <p className="font-bold text-lg">{c.code}</p>
-                          <p className="text-xs text-zinc-500 mt-1">Drive ID: {c.drive_folder_id}</p>
+                          <p className="font-bold text-xl font-mono text-white flex items-center gap-2">
+                            {c.code}
+                          </p>
+                          <p className="text-xs text-zinc-500 mt-1 font-mono break-all">ID: {c.drive_folder_id}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <a 
                             href={`https://drive.google.com/drive/folders/${c.drive_folder_id}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded text-sm font-medium"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-semibold hover:bg-blue-500/20 transition-colors"
                           >
-                            Mở Drive
+                            <FolderOpen size={16} /> Mở Drive
                           </a>
                           <button 
                             onClick={() => handleViewPhotos(c.id, c.code)}
-                            className="px-3 py-1 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors"
                           >
-                            Xem ảnh chọn
+                            <Images size={16} /> Xem ảnh chọn
                           </button>
                           <button 
                             onClick={() => handleDeleteClient(c.id, c.code)}
-                            className="px-3 py-1 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold hover:bg-red-500/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                             title="Xóa khách hàng"
                           >
-                            Xóa
+                            <Trash2 size={16} /> Xóa
                           </button>
                         </div>
                       </div>
@@ -259,26 +268,35 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Modal Xem Ảnh Chọn */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-              <h3 className="text-lg font-bold">Khách: {modalClientCode}</h3>
-              <button onClick={() => setShowModal(false)} className="text-zinc-500 hover:text-black dark:hover:text-white font-bold p-2">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="bg-zinc-950 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-white/10">
+            <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Images size={20} className="text-purple-400" /> Khách: {modalClientCode}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">✕</button>
             </div>
             
-            <div className="p-4 max-h-[60vh] overflow-y-auto">
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
               {loadingPhotos ? (
-                <p className="text-center py-8">Đang tải dữ liệu...</p>
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                </div>
               ) : selectedPhotos.length === 0 ? (
-                <p className="text-center py-8 text-zinc-500">Khách chưa chọn bức ảnh nào.</p>
+                <div className="text-center py-8 text-zinc-500 bg-black/30 rounded-xl border border-white/5">
+                  Khách chưa chọn bức ảnh nào.
+                </div>
               ) : (
                 <>
-                  <p className="mb-4 font-medium text-green-600">Tổng cộng: {selectedPhotos.length} ảnh</p>
-                  <ul className="space-y-2">
+                  <p className="mb-4 font-semibold text-green-400 bg-green-500/10 border border-green-500/20 p-3 rounded-xl inline-block">
+                    Tổng cộng: {selectedPhotos.length} ảnh
+                  </p>
+                  <ul className="space-y-2 mt-2">
                     {selectedPhotos.map((photo, index) => (
-                      <li key={index} className="flex justify-between p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded text-sm">
-                        <span>{photo.image_name}</span>
+                      <li key={index} className="flex justify-between p-3 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-zinc-300 hover:bg-white/5 transition-colors">
+                        {photo.image_name}
                       </li>
                     ))}
                   </ul>
@@ -289,7 +307,7 @@ export default function AdminPage() {
                       navigator.clipboard.writeText(names);
                       alert("Đã copy danh sách tên file!");
                     }}
-                    className="mt-6 w-full py-2 bg-black dark:bg-white text-white dark:text-black rounded font-medium"
+                    className="mt-6 w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors shadow-lg"
                   >
                     Copy danh sách tên file
                   </button>
