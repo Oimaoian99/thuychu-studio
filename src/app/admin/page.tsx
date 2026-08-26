@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Trash2, FolderOpen, Images, LogOut, ArrowLeft } from "lucide-react";
+import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2 } from "lucide-react";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -126,6 +126,34 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateLimit = async (id: string, currentLimit: number) => {
+    const newLimitStr = prompt("Nhập số lượng ảnh tối đa MỚI cho khách hàng này:", currentLimit.toString());
+    if (!newLimitStr) return;
+    const newLimit = parseInt(newLimitStr, 10);
+    
+    if (isNaN(newLimit) || newLimit <= 0) {
+      alert("Số lượng không hợp lệ! Vui lòng nhập một số lớn hơn 0.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/clients/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max_selections: newLimit })
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        fetchClients();
+      } else {
+        alert("Lỗi khi cập nhật: " + json.error);
+      }
+    } catch (error) {
+      alert("Lỗi kết nối");
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -241,7 +269,16 @@ export default function AdminPage() {
                           <p className="font-bold text-xl font-mono text-white flex items-center gap-2">
                             {c.code}
                           </p>
-                          <p className="text-xs text-zinc-500 mt-1 font-mono break-all">ID: {c.drive_folder_id} <span className="text-purple-400 font-bold ml-2">• Gói: {c.max_selections || 5} ảnh</span></p>
+                          <p className="text-xs text-zinc-500 mt-2 font-mono break-all flex items-center gap-3">
+                            <span>ID: {c.drive_folder_id}</span>
+                            <span 
+                              onClick={() => handleUpdateLimit(c.id, c.max_selections || 5)}
+                              className="text-purple-400 font-bold flex items-center gap-1.5 cursor-pointer hover:text-purple-300 hover:underline transition-all bg-purple-500/10 px-2 py-0.5 rounded-md"
+                              title="Bấm để đổi số lượng ảnh"
+                            >
+                              • Gói: {c.max_selections || 5} ảnh <Edit2 size={12} />
+                            </span>
+                          </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <a 
