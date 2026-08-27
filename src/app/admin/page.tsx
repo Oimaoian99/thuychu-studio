@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download } from "lucide-react";
 
 import JSZip from "jszip";
+// @ts-ignore
 import { saveAs } from "file-saver";
 
 export default function AdminPage() {
