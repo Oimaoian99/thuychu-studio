@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download } from "lucide-react";
 
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -19,6 +22,9 @@ export default function AdminPage() {
   const [modalClientCode, setModalClientCode] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<any[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  
+  const [zipping, setZipping] = useState(false);
+  const [zipProgress, setZipProgress] = useState("");
 
   useEffect(() => {
     const isAuth = localStorage.getItem("admin_authenticated");
@@ -358,24 +364,51 @@ export default function AdminPage() {
                       Copy danh sách tên file
                     </button>
                     <button 
-                      onClick={() => {
-                        if (!confirm(`Bạn có muốn tải ${selectedPhotos.length} ảnh này về máy không? (Lưu ý: Trình duyệt có thể sẽ hiện thông báo chặn tải nhiều file, bạn nhớ ấn 'Cho phép' / 'Allow' nhé)`)) return;
+                      onClick={async () => {
+                        if (selectedPhotos.length === 0) return;
+                        setZipping(true);
+                        setZipProgress("Đang chuẩn bị...");
                         
-                        selectedPhotos.forEach((photo, index) => {
-                          setTimeout(() => {
-                            const link = document.createElement("a");
-                            link.href = `https://drive.google.com/uc?export=download&id=${photo.image_drive_id}`;
-                            link.setAttribute("download", photo.image_name);
-                            link.setAttribute("target", "_blank");
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }, index * 800); // Tải cách nhau 0.8s để tránh bị trình duyệt chặn
-                        });
+                        try {
+                          const zip = new JSZip();
+                          
+                          for (let i = 0; i < selectedPhotos.length; i++) {
+                            const photo = selectedPhotos[i];
+                            setZipProgress(`Đang tải ảnh ${i + 1}/${selectedPhotos.length}...`);
+                            
+                            // Dùng proxy API để tránh lỗi CORS
+                            const res = await fetch(`/api/drive/proxy?id=${photo.image_drive_id}`);
+                            if (!res.ok) throw new Error("Lỗi tải ảnh");
+                            
+                            const blob = await res.blob();
+                            zip.file(photo.image_name, blob);
+                          }
+                          
+                          setZipProgress("Đang nén file (có thể mất vài chục giây)...");
+                          const content = await zip.generateAsync({ type: "blob" });
+                          
+                          saveAs(content, `ThuyChuStudio_${modalClientCode}.zip`);
+                        } catch (err) {
+                          alert("Có lỗi xảy ra khi nén file. Vui lòng thử lại sau.");
+                          console.error(err);
+                        } finally {
+                          setZipping(false);
+                          setZipProgress("");
+                        }
                       }}
-                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
+                      disabled={zipping}
+                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      <Download size={18} /> Tải {selectedPhotos.length} ảnh về máy
+                      {zipping ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          {zipProgress}
+                        </>
+                      ) : (
+                        <>
+                          <Download size={18} /> Tải toàn bộ ảnh (.ZIP)
+                        </>
+                      )}
                     </button>
                   </div>
                 </>
