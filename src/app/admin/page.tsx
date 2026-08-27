@@ -271,15 +271,15 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   {clients.map((c) => (
                     <div key={c.id} className="p-5 border border-white/10 bg-black/20 rounded-2xl hover:bg-white/5 transition-all group">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         <div className="flex-1 w-full min-w-0">
-                          <div className="flex items-center gap-3 mb-1.5">
-                            <h3 className="font-bold text-xl font-mono text-white truncate">
+                          <div className="flex flex-wrap items-center gap-3 mb-1.5">
+                            <h3 className="font-bold text-xl font-mono text-white break-all">
                               {c.code}
                             </h3>
                             <button 
                               onClick={() => handleUpdateLimit(c.id, c.max_selections || 5)}
-                              className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-semibold rounded-full transition-all border border-white/5 whitespace-nowrap group-hover:border-white/10"
+                              className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-semibold rounded-full transition-all border border-white/5 whitespace-nowrap group-hover:border-white/10 shrink-0"
                               title="Bấm để đổi số lượng ảnh"
                             >
                               Gói {c.max_selections || 5} ảnh <Edit2 size={10} className="opacity-50 group-hover:opacity-100" />
