@@ -35,7 +35,7 @@ export default function Home() {
             <Camera size={36} className="text-white" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">
-            Thủy Chu Studio
+            Thúy Chu Studio
           </h1>
           <p className="text-zinc-400 font-medium">
             Nhập mã khách hàng của bạn để xem và chọn ảnh

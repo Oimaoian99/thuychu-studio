@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2 } from "lucide-react";
+import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download } from "lucide-react";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -346,16 +346,38 @@ export default function AdminPage() {
                     ))}
                   </ul>
                   
-                  <button 
-                    onClick={() => {
-                      const names = selectedPhotos.map(p => p.image_name).join(", ");
-                      navigator.clipboard.writeText(names);
-                      alert("Đã copy danh sách tên file!");
-                    }}
-                    className="mt-6 w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors shadow-lg"
-                  >
-                    Copy danh sách tên file
-                  </button>
+                  <div className="mt-6 flex flex-col gap-3">
+                    <button 
+                      onClick={() => {
+                        const names = selectedPhotos.map(p => p.image_name).join(", ");
+                        navigator.clipboard.writeText(names);
+                        alert("Đã copy danh sách tên file!");
+                      }}
+                      className="w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors shadow-lg"
+                    >
+                      Copy danh sách tên file
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!confirm(`Bạn có muốn tải ${selectedPhotos.length} ảnh này về máy không? (Lưu ý: Trình duyệt có thể sẽ hiện thông báo chặn tải nhiều file, bạn nhớ ấn 'Cho phép' / 'Allow' nhé)`)) return;
+                        
+                        selectedPhotos.forEach((photo, index) => {
+                          setTimeout(() => {
+                            const link = document.createElement("a");
+                            link.href = `https://drive.google.com/uc?export=download&id=${photo.image_drive_id}`;
+                            link.setAttribute("download", photo.image_name);
+                            link.setAttribute("target", "_blank");
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }, index * 800); // Tải cách nhau 0.8s để tránh bị trình duyệt chặn
+                        });
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} /> Tải {selectedPhotos.length} ảnh về máy
+                    </button>
+                  </div>
                 </>
               )}
             </div>
