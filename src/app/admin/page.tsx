@@ -272,50 +272,53 @@ export default function AdminPage() {
                   {clients.map((c) => (
                     <div key={c.id} className="p-5 border border-white/10 bg-black/20 rounded-2xl hover:bg-white/5 transition-all group">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                          <p className="font-bold text-xl font-mono text-white flex items-center gap-2">
-                            {c.code}
-                          </p>
-                          <p className="text-xs text-zinc-500 mt-2 font-mono break-all flex items-center gap-3">
-                            <span>ID: {c.drive_folder_id}</span>
-                            <span 
+                        <div className="flex-1 w-full min-w-0">
+                          <div className="flex items-center gap-3 mb-1.5">
+                            <h3 className="font-bold text-xl font-mono text-white truncate">
+                              {c.code}
+                            </h3>
+                            <button 
                               onClick={() => handleUpdateLimit(c.id, c.max_selections || 5)}
-                              className="text-purple-400 font-bold flex items-center gap-1.5 cursor-pointer hover:text-purple-300 hover:underline transition-all bg-purple-500/10 px-2 py-0.5 rounded-md"
+                              className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-semibold rounded-full transition-all border border-white/5 whitespace-nowrap group-hover:border-white/10"
                               title="Bấm để đổi số lượng ảnh"
                             >
-                              • Gói: {c.max_selections || 5} ảnh <Edit2 size={12} />
-                            </span>
+                              Gói {c.max_selections || 5} ảnh <Edit2 size={10} className="opacity-50 group-hover:opacity-100" />
+                            </button>
+                          </div>
+                          <p className="text-xs text-zinc-500 font-mono truncate max-w-full" title={c.drive_folder_id}>
+                            ID: {c.drive_folder_id}
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
                           <a 
                             href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=GOC`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-semibold hover:bg-blue-500/20 transition-colors"
+                            className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-semibold hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
                           >
-                            <FolderOpen size={16} /> Đẩy file gốc
+                            <FolderOpen size={16} /> File gốc
                           </a>
                           <a 
                             href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=SUA`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 transition-colors"
+                            className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
                           >
-                            <FolderOpen size={16} /> Đẩy file sửa
+                            <FolderOpen size={16} /> File sửa
                           </a>
                           <button 
                             onClick={() => handleViewPhotos(c.id, c.code)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors"
+                            className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
                           >
-                            <Images size={16} /> Xem ảnh chọn
+                            <Images size={16} /> Xem ảnh
                           </button>
                           <button 
                             onClick={() => handleDeleteClient(c.id, c.code)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold hover:bg-red-500/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                            className="flex justify-center items-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold hover:bg-red-500/20 hover:scale-105 active:scale-95 transition-all shadow-sm sm:opacity-0 sm:group-hover:opacity-100"
                             title="Xóa khách hàng"
                           >
-                            <Trash2 size={16} /> Xóa
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
