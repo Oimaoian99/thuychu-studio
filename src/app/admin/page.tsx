@@ -289,12 +289,20 @@ export default function AdminPage() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <a 
-                            href={`https://drive.google.com/drive/folders/${c.drive_folder_id}`} 
+                            href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=GOC`} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="flex items-center gap-1.5 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-semibold hover:bg-blue-500/20 transition-colors"
                           >
-                            <FolderOpen size={16} /> Mở Drive
+                            <FolderOpen size={16} /> Đẩy file gốc
+                          </a>
+                          <a 
+                            href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=SUA`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 transition-colors"
+                          >
+                            <FolderOpen size={16} /> Đẩy file sửa
                           </a>
                           <button 
                             onClick={() => handleViewPhotos(c.id, c.code)}
