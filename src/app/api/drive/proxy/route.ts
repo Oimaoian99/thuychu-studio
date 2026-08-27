@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { drive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -9,16 +9,6 @@ export async function GET(req: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
-
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
-
-    const drive = google.drive({ version: 'v3', auth });
 
     // Lấy luồng dữ liệu file từ Google Drive
     const response = await drive.files.get(
