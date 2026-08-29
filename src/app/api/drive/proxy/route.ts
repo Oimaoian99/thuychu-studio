@@ -5,6 +5,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
+    const name = searchParams.get('name') || 'image.jpg';
 
     if (!id) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
@@ -22,6 +23,7 @@ export async function GET(req: Request) {
     return new Response(stream, {
       headers: {
         'Content-Type': response.headers['content-type'] || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(name)}"`,
       },
     });
   } catch (error: any) {

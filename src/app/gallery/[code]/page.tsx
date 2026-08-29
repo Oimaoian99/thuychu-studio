@@ -44,32 +44,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     fetchImages();
   }, [code]);
 
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
-  const handleDownload = async (img: any) => {
-    try {
-      setDownloadingId(img.id);
-      // Sử dụng proxy để lấy file dưới dạng Blob, ép trình duyệt tải thay vì xem trước
-      const res = await fetch(`/api/drive/proxy?id=${img.id}`);
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = img.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-      // Fallback nếu lỗi
-      window.open(img.downloadUrl || img.url, '_blank');
-    } finally {
-      setDownloadingId(null);
-    }
-  };
 
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selected);
@@ -205,21 +179,15 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
                   {/* Nút Download */}
                   {img.downloadUrl && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(img);
-                      }}
-                      disabled={downloadingId === img.id}
+                    <a
+                      href={`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
+                      download
                       title="Tải ảnh về máy"
-                      className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20 disabled:opacity-50"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20"
                     >
-                      {downloadingId === img.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                      ) : (
-                        <Download size={18} strokeWidth={2.5} />
-                      )}
-                    </button>
+                      <Download size={18} strokeWidth={2.5} />
+                    </a>
                   )}
                 </div>
               );
