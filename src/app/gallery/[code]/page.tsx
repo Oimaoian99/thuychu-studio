@@ -45,17 +45,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     fetchImages();
   }, [code]);
 
-  const handleDownloadClick = (e: any) => {
-    // Phát hiện nếu đang mở bằng Zalo, Facebook, Messenger trên iOS
-    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
-    const isInApp = /FBAN|FBAV|Zalo|Instagram|Line/i.test(ua);
-    
-    if (isIOS && isInApp) {
-      e.preventDefault();
-      setShowInAppWarning(true);
-    }
-  };
+
 
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selected);
@@ -195,10 +185,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                       href={`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
                       download
                       title="Tải ảnh về máy"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadClick(e);
-                      }}
+                      onClick={(e) => e.stopPropagation()}
                       className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20"
                     >
                       <Download size={18} strokeWidth={2.5} />

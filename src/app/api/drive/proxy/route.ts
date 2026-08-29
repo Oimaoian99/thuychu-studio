@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     
     return new Response(stream, {
       headers: {
-        'Content-Type': response.headers['content-type'] || 'application/octet-stream',
+        'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${encodeURIComponent(name)}"`,
       },
     });
