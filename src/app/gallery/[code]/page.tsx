@@ -176,15 +176,15 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                     </div>
                   )}
 
-                  {/* Nút Download tinh tế */}
+                  {/* Nút Download */}
                   {img.downloadUrl && (
                     <a
                       href={img.downloadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       download={img.name}
-                      title="Tải ảnh gốc về máy"
-                      className="absolute bottom-4 right-4 w-10 h-10 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 sm:translate-y-0 sm:opacity-100"
+                      title="Tải ảnh về máy"
+                      className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20"
                     >
                       <Download size={18} strokeWidth={2.5} />
                     </a>
