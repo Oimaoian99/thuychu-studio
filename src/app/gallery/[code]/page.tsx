@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Compass } from "lucide-react";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -17,6 +17,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [maxSelections, setMaxSelections] = useState(5); // Setup mặc định
+  const [showInAppWarning, setShowInAppWarning] = useState(false);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -44,6 +45,17 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     fetchImages();
   }, [code]);
 
+  const handleDownloadClick = (e: any) => {
+    // Phát hiện nếu đang mở bằng Zalo, Facebook, Messenger trên iOS
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isInApp = /FBAN|FBAV|Zalo|Instagram|Line/i.test(ua);
+    
+    if (isIOS && isInApp) {
+      e.preventDefault();
+      setShowInAppWarning(true);
+    }
+  };
 
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selected);
@@ -183,7 +195,10 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                       href={`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
                       download
                       title="Tải ảnh về máy"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadClick(e);
+                      }}
                       className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20"
                     >
                       <Download size={18} strokeWidth={2.5} />
@@ -264,6 +279,32 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               ) : (
                 <><Send size={18} /> Gửi Studio</>
               )}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Cảnh báo mở bằng Safari/Chrome khi dùng Zalo/FB */}
+      {showInAppWarning && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
+          <div className="bg-zinc-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl relative">
+            <button 
+              onClick={() => setShowInAppWarning(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-400">
+              <Compass size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">Mở bằng trình duyệt</h3>
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              Các ứng dụng như Zalo, Messenger thường chặn việc tải ảnh. Để tải file gốc sắc nét, bạn vui lòng bấm vào dấu <strong className="text-white">...</strong> ở góc trên bên phải màn hình và chọn <strong className="text-white">Mở bằng trình duyệt</strong> (Open in Safari / Chrome).
+            </p>
+            <button 
+              onClick={() => setShowInAppWarning(false)}
+              className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors"
+            >
+              Đã hiểu
             </button>
           </div>
         </div>
