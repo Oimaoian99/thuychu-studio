@@ -290,7 +290,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
           <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-16" onClick={(e) => e.stopPropagation()}>
             {currentImages[previewIndex].mimeType?.includes('video/') ? (
-              <CustomVideoPlayer src={`/api/drive/proxy?id=${currentImages[previewIndex].id}&action=view`} />
+              <CustomVideoPlayer src={currentImages[previewIndex].id} />
             ) : (
               <img 
                 src={currentImages[previewIndex].url ? `${currentImages[previewIndex].url}&w=2048` : `/api/drive/proxy?id=${currentImages[previewIndex].id}&action=view`}
