@@ -2,18 +2,21 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Compass } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Compass, Film, PlayCircle, RotateCw } from "lucide-react";
+import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const [rawImages, setRawImages] = useState<any[]>([]);
   const [editedImages, setEditedImages] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [clientId, setClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<'raw' | 'edited'>('raw');
+  const [activeTab, setActiveTab] = useState<'raw' | 'edited' | 'video'>('raw');
+  const [imgError, setImgError] = useState<Record<string, boolean>>({});
   
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [maxSelections, setMaxSelections] = useState(5); // Setup mặc định
@@ -25,13 +28,27 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         const res = await fetch(`/api/gallery/${code}`);
         const json = await res.json();
         if (json.success) {
-          setRawImages(json.rawFiles || []);
-          setEditedImages(json.editedFiles || []);
+          const allRaw = json.rawFiles || [];
+          const allEdited = json.editedFiles || [];
+          
+          const rawImgs = allRaw.filter((f: any) => f.mimeType?.includes('image/'));
+          const editedImgs = allEdited.filter((f: any) => f.mimeType?.includes('image/'));
+          const rawVids = allRaw.filter((f: any) => f.mimeType?.includes('video/'));
+          const editedVids = allEdited.filter((f: any) => f.mimeType?.includes('video/'));
+          
+          setRawImages(rawImgs);
+          setEditedImages(editedImgs);
+          
+          // Lọc trùng id cho videos lỡ có file nằm ở cả 2 thư mục
+          const allVids = [...rawVids, ...editedVids];
+          const uniqueVids = Array.from(new Map(allVids.map(item => [item.id, item])).values());
+          setVideos(uniqueVids);
+
           setClientId(json.clientId);
           setSelected(new Set(json.selectedIds));
           setMaxSelections(json.maxSelections || 5); // Cập nhật giới hạn từ Database
           
-          if (json.editedFiles && json.editedFiles.length > 0) {
+          if (editedImgs.length > 0) {
             setActiveTab('edited');
           }
         } else {
@@ -105,7 +122,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   );
   if (error) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-red-400 font-medium">{error}</div>;
 
-  const currentImages = activeTab === 'raw' ? rawImages : editedImages;
+  const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black pb-32 overflow-x-hidden selection:bg-purple-500/30">
@@ -130,19 +147,27 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           </div>
           
           {/* Custom Tabs */}
-          <div className="flex p-1.5 bg-black/50 border border-white/10 rounded-full w-full sm:w-auto backdrop-blur-md shadow-inner">
+          <div className="flex p-1.5 bg-black/50 border border-white/10 rounded-full w-full sm:w-auto backdrop-blur-md shadow-inner overflow-x-auto">
             <button 
               onClick={() => setActiveTab('raw')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'raw' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${activeTab === 'raw' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
               <ImageIcon size={16} /> Ảnh Gốc <span className="opacity-70 font-normal">({selected.size}/{maxSelections})</span>
             </button>
             <button 
               onClick={() => setActiveTab('edited')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'edited' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${activeTab === 'edited' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
               <Sparkles size={16} /> Đã Sửa
             </button>
+            {videos.length > 0 && (
+              <button 
+                onClick={() => setActiveTab('video')}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${activeTab === 'video' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
+              >
+                <Film size={16} /> Video
+              </button>
+            )}
           </div>
           
           <div className="hidden sm:block"><ThemeToggle /></div>
@@ -154,16 +179,17 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         {currentImages.length === 0 ? (
           <div className="text-center text-zinc-500 mt-32 flex flex-col items-center gap-6">
             <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
-              {activeTab === 'edited' ? <Sparkles size={40} className="text-purple-400 opacity-50" /> : <ImageIcon size={40} className="text-zinc-600" />}
+              {activeTab === 'edited' ? <Sparkles size={40} className="text-purple-400 opacity-50" /> : activeTab === 'video' ? <Film size={40} className="text-zinc-600" /> : <ImageIcon size={40} className="text-zinc-600" />}
             </div>
             <p className="text-lg font-medium text-zinc-400">
-              {activeTab === 'edited' ? "Nhiếp ảnh gia đang xử lý ảnh của bạn. Trở lại sau nhé!" : "Chưa có ảnh nào trong thư mục này."}
+              {activeTab === 'edited' ? "Nhiếp ảnh gia đang xử lý ảnh của bạn. Trở lại sau nhé!" : activeTab === 'video' ? "Chưa có video nào trong thư mục này." : "Chưa có ảnh nào trong thư mục này."}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {currentImages.map((img, index) => {
               const isSelected = selected.has(img.id);
+              const isVideo = img.mimeType?.includes('video/');
               return (
                 <div 
                   key={img.id} 
@@ -172,16 +198,35 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                   {/* Overlay Gradient Darken at bottom for better button visibility */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" />
                   
-                  <img
-                    src={img.url}
-                    alt={img.name}
-                    onClick={() => setPreviewIndex(index)}
-                    className="object-cover w-full h-full cursor-zoom-in transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                  />
+                  {img.url && !imgError[img.id] ? (
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      onClick={() => setPreviewIndex(index)}
+                      onError={() => setImgError(prev => ({ ...prev, [img.id]: true }))}
+                      className="object-cover w-full h-full cursor-zoom-in transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div 
+                      className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center cursor-zoom-in border border-white/5"
+                      onClick={() => setPreviewIndex(index)}
+                    >
+                      {isVideo ? <Film size={40} className="text-zinc-700 mb-2" /> : <ImageIcon size={40} className="text-zinc-700 mb-2" />}
+                      <span className="text-xs text-zinc-600 px-4 text-center truncate w-full">{img.name}</span>
+                    </div>
+                  )}
+
+                  {isVideo && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      <div className="bg-black/50 rounded-full p-3 backdrop-blur-md">
+                        <PlayCircle size={40} className="text-white opacity-90" strokeWidth={1.5} />
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Checkbox siêu đẹp */}
-                  {activeTab === 'raw' && (
+                  {activeTab === 'raw' && !isVideo && (
                     <div 
                       onClick={() => toggleSelect(img.id)}
                       className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${isSelected ? 'bg-gradient-to-tr from-purple-500 to-blue-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
@@ -244,11 +289,22 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           )}
 
           <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-16" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={currentImages[previewIndex].url.replace('=w1080', '=w2048')}
-              alt={currentImages[previewIndex].name}
-              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-            />
+            {currentImages[previewIndex].mimeType?.includes('video/') ? (
+              <CustomVideoPlayer src={`/api/drive/proxy?id=${currentImages[previewIndex].id}&action=view`} />
+            ) : (
+              <img 
+                src={currentImages[previewIndex].url ? `${currentImages[previewIndex].url}&w=2048` : `/api/drive/proxy?id=${currentImages[previewIndex].id}&action=view`}
+                alt={currentImages[previewIndex].name}
+                className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-black/20"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const fallbackUrl = `/api/drive/proxy?id=${currentImages[previewIndex].id}&action=view`;
+                  if (target.src !== fallbackUrl && !target.src.includes(fallbackUrl)) {
+                    target.src = fallbackUrl;
+                  }
+                }}
+              />
+            )}
             
             {activeTab === 'raw' && (
               <button 

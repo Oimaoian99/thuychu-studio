@@ -28,28 +28,33 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     const suaFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('SUA'));
 
     const formatImage = (file: any) => {
-      let url = file.thumbnailLink || '';
-      if (url) url = url.replace(/=s\d+/, '=w1080');
-      return { id: file.id, name: file.name, url: url, downloadUrl: file.webContentLink };
+      let url = `/api/drive/thumbnail?id=${file.id}`;
+      return { 
+        id: file.id, 
+        name: file.name, 
+        url: url, 
+        downloadUrl: file.webContentLink,
+        mimeType: file.mimeType || ''
+      };
     };
 
     let rawFiles: any[] = [];
     let editedFiles: any[] = [];
 
-    // 3. Lấy ảnh từ thư mục GOC (Nếu có thư mục con, nếu không lấy ở thư mục gốc)
+    // 3. Lấy ảnh và video từ thư mục GOC (Nếu có thư mục con, nếu không lấy ở thư mục gốc)
     const rawTargetId = gocFolder ? gocFolder.id : client.drive_folder_id;
     const rawDriveRes = await drive.files.list({
-      q: `'${rawTargetId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name, thumbnailLink, webContentLink)',
+      q: `'${rawTargetId}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
+      fields: 'files(id, name, thumbnailLink, webContentLink, mimeType)',
       pageSize: 500,
     });
     rawFiles = rawDriveRes.data.files?.map(formatImage) || [];
 
-    // 4. Lấy ảnh từ thư mục SUA (nếu có)
+    // 4. Lấy ảnh và video từ thư mục SUA (nếu có)
     if (suaFolder) {
       const suaDriveRes = await drive.files.list({
-        q: `'${suaFolder.id}' in parents and mimeType contains 'image/' and trashed = false`,
-        fields: 'files(id, name, thumbnailLink, webContentLink)',
+        q: `'${suaFolder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
+        fields: 'files(id, name, thumbnailLink, webContentLink, mimeType)',
         pageSize: 500,
       });
       editedFiles = suaDriveRes.data.files?.map(formatImage) || [];
