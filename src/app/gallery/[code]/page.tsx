@@ -79,7 +79,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       return;
     }
 
-    if (isIOS && navigator.share) {
+    if (isIOS && typeof navigator.share === 'function') {
       e.preventDefault();
       
       try {
@@ -104,7 +104,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   };
 
   const executeShare = async () => {
-    if (readyToShareFile && navigator.share) {
+    if (readyToShareFile && typeof navigator.share === 'function') {
       try {
         await navigator.share({
           files: [readyToShareFile]
