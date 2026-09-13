@@ -65,6 +65,9 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
 
 
+
+  const [readyToShareFile, setReadyToShareFile] = useState<File | null>(null);
+
   const handleDownloadClick = async (e: any, img: any) => {
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
@@ -76,46 +79,40 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       return;
     }
 
-    // Nếu là iOS và có hỗ trợ Web Share API (để lưu thẳng vào Thư viện ảnh)
     if (isIOS && navigator.share) {
-      e.preventDefault(); // Ngăn trình duyệt tự tải file vào mục Tải về (Files)
+      e.preventDefault();
       
       try {
         setDownloadingId(img.id);
-        
-        // Kéo file gốc về trước
         const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
         const blob = await response.blob();
+        const file = new File([blob], img.name, { type: blob.type || 'image/jpeg' });
         
-        // Ép kiểu chuẩn xác để iOS nhận diện đúng đây là ảnh
-        const mimeType = blob.type || 'image/jpeg';
-        const file = new File([blob], img.name, { type: mimeType });
-        
-        // Kiểm tra xem trình duyệt có cho phép share file này không
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file]
-          });
-        } else {
-          // Fallback: Nếu không share được thì đành dùng cách cũ (mở link tải)
-          const tempLink = document.createElement('a');
-          tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
-          tempLink.download = img.name;
-          tempLink.click();
-        }
+        // Thay vì gọi share ngay (sẽ bị iOS chặn vì timeout), ta lưu file lại và hiển thị nút bấm
+        setReadyToShareFile(file);
       } catch (error: any) {
-        console.error("Lỗi khi lưu ảnh:", error);
-        // Nếu người dùng bấm Hủy (AbortError) thì bỏ qua.
-        // Còn nếu lỗi khác thì fallback về tải kiểu cũ.
-        if (error.name !== 'AbortError') {
-          const tempLink = document.createElement('a');
-          tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
-          tempLink.download = img.name;
-          tempLink.click();
-        }
+        console.error("Lỗi tải ảnh:", error);
+        // Fallback
+        const tempLink = document.createElement('a');
+        tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
+        tempLink.download = img.name;
+        tempLink.click();
       } finally {
         setDownloadingId(null);
       }
+    }
+  };
+
+  const executeShare = async () => {
+    if (readyToShareFile && navigator.share) {
+      try {
+        await navigator.share({
+          files: [readyToShareFile]
+        });
+      } catch (e) {
+        console.error(e);
+      }
+      setReadyToShareFile(null); // Đóng popup
     }
   };
 
@@ -414,6 +411,34 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           </div>
         </div>
       )}
+
+      {/* Modal báo ảnh đã sẵn sàng lưu cho iOS */}
+      {readyToShareFile && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
+          <div className="bg-zinc-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl relative">
+            <button 
+              onClick={() => setReadyToShareFile(null)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-green-400">
+              <Download size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">Đã sẵn sàng lưu!</h3>
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              Ảnh gốc đã được tải về bộ nhớ tạm. Bấm nút dưới đây và chọn <strong className="text-white">Lưu hình ảnh (Save Image)</strong> để lưu thẳng vào Thư viện ảnh của bạn nhé.
+            </p>
+            <button 
+              onClick={executeShare}
+              className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2"
+            >
+              <Download size={20} /> Mở bảng Lưu ảnh
+            </button>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
