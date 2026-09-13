@@ -11,6 +11,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [editedImages, setEditedImages] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,7 +65,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
 
 
-  const handleDownloadClick = (e: any) => {
+  const handleDownloadClick = async (e: any, img: any) => {
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isInApp = /FBAN|FBAV|Zalo|Instagram|Line/i.test(ua);
@@ -72,6 +73,49 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     if (isIOS && isInApp) {
       e.preventDefault();
       setShowInAppWarning(true);
+      return;
+    }
+
+    // Nếu là iOS và có hỗ trợ Web Share API (để lưu thẳng vào Thư viện ảnh)
+    if (isIOS && navigator.share) {
+      e.preventDefault(); // Ngăn trình duyệt tự tải file vào mục Tải về (Files)
+      
+      try {
+        setDownloadingId(img.id);
+        
+        // Kéo file gốc về trước
+        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
+        const blob = await response.blob();
+        
+        // Ép kiểu chuẩn xác để iOS nhận diện đúng đây là ảnh
+        const mimeType = blob.type || 'image/jpeg';
+        const file = new File([blob], img.name, { type: mimeType });
+        
+        // Kiểm tra xem trình duyệt có cho phép share file này không
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file]
+          });
+        } else {
+          // Fallback: Nếu không share được thì đành dùng cách cũ (mở link tải)
+          const tempLink = document.createElement('a');
+          tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
+          tempLink.download = img.name;
+          tempLink.click();
+        }
+      } catch (error: any) {
+        console.error("Lỗi khi lưu ảnh:", error);
+        // Nếu người dùng bấm Hủy (AbortError) thì bỏ qua.
+        // Còn nếu lỗi khác thì fallback về tải kiểu cũ.
+        if (error.name !== 'AbortError') {
+          const tempLink = document.createElement('a');
+          tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
+          tempLink.download = img.name;
+          tempLink.click();
+        }
+      } finally {
+        setDownloadingId(null);
+      }
     }
   };
 
@@ -243,11 +287,15 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                       title="Tải ảnh về máy"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDownloadClick(e);
+                        handleDownloadClick(e, img);
                       }}
                       className="absolute bottom-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 shadow-xl z-20"
                     >
-                      <Download size={18} strokeWidth={2.5} />
+                      {downloadingId === img.id ? (
+                        <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                      ) : (
+                        <Download size={18} strokeWidth={2.5} />
+                      )}
                     </a>
                   )}
                 </div>
