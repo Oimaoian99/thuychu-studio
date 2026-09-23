@@ -27,37 +27,61 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     const gocFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('GOC'));
     const suaFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('SUA'));
 
-    const formatImage = (file: any) => {
+    const formatImage = (file: any, folderName?: string) => {
       let url = `/api/drive/thumbnail?id=${file.id}`;
       return { 
         id: file.id, 
         name: file.name, 
         url: url, 
         downloadUrl: file.webContentLink,
-        mimeType: file.mimeType || ''
+        mimeType: file.mimeType || '',
+        folderName: folderName || null // Lưu thêm tên folder để phân nhóm
       };
+    };
+
+    // Hàm hỗ trợ lấy ảnh trong thư mục hiện tại + 1 cấp thư mục con
+    const fetchImagesAndSubfolders = async (parentId: string) => {
+      const res = await drive.files.list({
+        q: `'${parentId}' in parents and trashed = false`,
+        fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
+        pageSize: 1000,
+      });
+      
+      const files = res.data.files || [];
+      const directFiles = files.filter(f => f.mimeType?.includes('image/') || f.mimeType?.includes('video/'));
+      const subfolders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+      
+      let allFiles = directFiles.map(f => formatImage(f, null));
+      
+      // Lấy thêm ảnh từ các thư mục con (chạy song song cho nhanh)
+      if (subfolders.length > 0) {
+        const subfolderPromises = subfolders.map(async (folder) => {
+          const subRes = await drive.files.list({
+            q: `'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
+            fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
+            pageSize: 1000,
+          });
+          return (subRes.data.files || []).map(f => formatImage(f, folder.name));
+        });
+        
+        const subfolderFilesArrays = await Promise.all(subfolderPromises);
+        for (const subArray of subfolderFilesArrays) {
+          allFiles = allFiles.concat(subArray);
+        }
+      }
+      return allFiles;
     };
 
     let rawFiles: any[] = [];
     let editedFiles: any[] = [];
 
-    // 3. Lấy ảnh và video từ thư mục GOC (Nếu có thư mục con, nếu không lấy ở thư mục gốc)
+    // 3. Lấy ảnh và video từ thư mục GOC (bao gồm cả thư mục con)
     const rawTargetId = gocFolder ? gocFolder.id : client.drive_folder_id;
-    const rawDriveRes = await drive.files.list({
-      q: `'${rawTargetId}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-      fields: 'files(id, name, thumbnailLink, webContentLink, mimeType)',
-      pageSize: 500,
-    });
-    rawFiles = rawDriveRes.data.files?.map(formatImage) || [];
+    rawFiles = await fetchImagesAndSubfolders(rawTargetId);
 
     // 4. Lấy ảnh và video từ thư mục SUA (nếu có)
     if (suaFolder) {
-      const suaDriveRes = await drive.files.list({
-        q: `'${suaFolder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-        fields: 'files(id, name, thumbnailLink, webContentLink, mimeType)',
-        pageSize: 500,
-      });
-      editedFiles = suaDriveRes.data.files?.map(formatImage) || [];
+      editedFiles = await fetchImagesAndSubfolders(suaFolder.id);
     }
 
     // 3. Lấy những ảnh đã được khách hàng chọn từ trước (nếu có)

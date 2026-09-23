@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Compass, Film, PlayCircle, RotateCw } from "lucide-react";
+import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Compass, Film, PlayCircle, RotateCw, Folder } from "lucide-react";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
@@ -165,6 +165,18 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
   const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
 
+  // Xử lý phân nhóm ảnh theo thư mục
+  const imagesWithIndex = currentImages.map((img, index) => ({ ...img, globalIndex: index }));
+  const groupedImages = imagesWithIndex.reduce((acc, img) => {
+    const folder = img.folderName || 'Ảnh ở bên ngoài';
+    if (!acc[folder]) acc[folder] = [];
+    acc[folder].push(img);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const folderNames = Object.keys(groupedImages);
+  const showHeaders = folderNames.length > 1 || (folderNames.length === 1 && folderNames[0] !== 'Ảnh ở bên ngoài');
+
   return (
     <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black pb-32 overflow-x-hidden selection:bg-purple-500/30">
       
@@ -227,11 +239,22 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {currentImages.map((img, index) => {
-              const isSelected = selected.has(img.id);
-              const isVideo = img.mimeType?.includes('video/');
-              return (
+          <div className="space-y-12">
+            {Object.entries(groupedImages).map(([folderName, images]) => (
+              <div key={folderName}>
+                {showHeaders && (
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3 pl-2 border-l-4 border-purple-500">
+                    <Folder size={24} className="text-purple-400" fill="currentColor" fillOpacity={0.2} />
+                    {folderName}
+                    <span className="text-sm font-normal text-zinc-500 ml-2 bg-white/5 px-3 py-1 rounded-full">{images.length} file</span>
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+                  {images.map((img) => {
+                    const isSelected = selected.has(img.id);
+                    const isVideo = img.mimeType?.includes('video/');
+                    const index = img.globalIndex;
+                    return (
                 <div 
                   key={img.id} 
                   className={`relative aspect-[3/4] group overflow-hidden rounded-2xl transition-all duration-300 ${isSelected && activeTab === 'raw' ? 'ring-4 ring-purple-500 ring-offset-4 ring-offset-zinc-950 shadow-[0_0_30px_rgba(168,85,247,0.3)]' : 'border border-white/10 hover:border-white/30'}`}
@@ -298,6 +321,9 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                 </div>
               );
             })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
