@@ -162,6 +162,9 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', sessionData.uploadUrl, true);
         xhr.setRequestHeader('Content-Type', uploadItem.file.type || 'application/octet-stream');
+        if (sessionData.token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${sessionData.token}`);
+        }
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {

@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     // 2. Gọi Google Drive API v3 để tạo Resumable Upload Session
     const requestOrigin = origin || req.headers.get('origin') || 'https://thuychustudio.com';
     
-    const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+    const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token.token}`,
@@ -62,7 +62,11 @@ export async function POST(req: Request) {
       throw new Error("Google không trả về đường dẫn upload hợp lệ.");
     }
 
-    return NextResponse.json({ success: true, uploadUrl: location });
+    return NextResponse.json({ 
+      success: true, 
+      uploadUrl: location,
+      token: token.token 
+    });
   } catch (error: any) {
     console.error("Upload Session Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
