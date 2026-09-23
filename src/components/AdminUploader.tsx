@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle, Image as ImageIcon, Film } from "lucide-react";
 
 interface AdminUploaderProps {
   folderId: string;
@@ -21,6 +21,27 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
   const [files, setFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [existingFiles, setExistingFiles] = useState<any[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
+
+  const fetchExistingFiles = async () => {
+    setLoadingFiles(true);
+    try {
+      const res = await fetch(`/api/admin/drive/list?parentId=${folderId}&type=${type}`);
+      const json = await res.json();
+      if (json.success) {
+        setExistingFiles(json.files);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setLoadingFiles(false);
+  };
+
+  useEffect(() => {
+    fetchExistingFiles();
+  }, [folderId, type]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -95,6 +116,16 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
       xhr.onload = () => {
         if (xhr.status === 200 || xhr.status === 201) {
           updateFileStatus(uploadItem.id, 'success', 100);
+          try {
+            const responseData = JSON.parse(xhr.responseText);
+            if (responseData.id) {
+              setExistingFiles(prev => [{
+                id: responseData.id,
+                name: responseData.name || uploadItem.file.name,
+                mimeType: uploadItem.file.type
+              }, ...prev]);
+            }
+          } catch(e) {}
         } else {
           updateFileStatus(uploadItem.id, 'error', 0, `Lỗi Server: ${xhr.status}`);
         }
@@ -160,8 +191,8 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
           </div>
         </div>
 
-        {/* Danh sách File */}
-        <div className="w-full md:w-1/2 flex flex-col h-full bg-black/20">
+        {/* Danh sách File Tải lên */}
+        <div className="w-full md:w-1/2 flex flex-col h-full bg-black/20 border-b md:border-b-0 border-white/10">
           <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
             <h3 className="font-bold text-white">Tiến trình tải lên</h3>
             <div className="flex gap-4 text-sm font-medium">
@@ -208,6 +239,53 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Danh sách File đã có sẵn (Existing Files) */}
+      <div className="flex-1 flex flex-col border-t border-white/10 bg-zinc-900/50 min-h-[300px]">
+        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
+          <h3 className="font-bold text-white flex items-center gap-2">
+            <ImageIcon size={18} className="text-blue-400" />
+            Các file đã có trong thư mục ({existingFiles.length})
+          </h3>
+          <button onClick={fetchExistingFiles} className="text-sm text-zinc-400 hover:text-white transition-colors underline">
+            Làm mới
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {loadingFiles ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+            </div>
+          ) : existingFiles.length === 0 ? (
+            <div className="flex justify-center items-center h-full text-zinc-500">
+              Chưa có ảnh nào trong thư mục này.
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+              {existingFiles.map((file, idx) => (
+                <div key={file.id + idx} className="aspect-square bg-black/40 rounded-xl overflow-hidden border border-white/10 relative group">
+                  {file.mimeType?.includes('video') ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/20 text-blue-400">
+                      <Film size={24} className="mb-2" />
+                      <span className="text-[10px] truncate w-full px-2 text-center">{file.name}</span>
+                    </div>
+                  ) : (
+                    <img 
+                      src={`/api/drive/thumbnail?id=${file.id}`} 
+                      alt={file.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
+                    <p className="text-xs text-white truncate w-full">{file.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
