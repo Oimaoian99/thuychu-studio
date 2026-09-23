@@ -7,6 +7,7 @@ import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download } from "
 import JSZip from "jszip";
 // @ts-ignore
 import { saveAs } from "file-saver";
+import AdminUploader from "@/components/AdminUploader";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,6 +27,8 @@ export default function AdminPage() {
   
   const [zipping, setZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState("");
+
+  const [uploadFolder, setUploadFolder] = useState<{ id: string, type: string } | null>(null);
 
   useEffect(() => {
     const isAuth = localStorage.getItem("admin_authenticated");
@@ -291,22 +294,18 @@ export default function AdminPage() {
                         </div>
                         
                         <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
-                          <a 
-                            href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=GOC`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                          <button 
+                            onClick={() => setUploadFolder({ id: c.drive_folder_id, type: 'GOC' })}
                             className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-semibold hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
                           >
-                            <FolderOpen size={16} /> File gốc
-                          </a>
-                          <a 
-                            href={`/api/admin/drive-redirect?folderId=${c.drive_folder_id}&type=SUA`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                            <FolderOpen size={16} /> Tải File Gốc
+                          </button>
+                          <button 
+                            onClick={() => setUploadFolder({ id: c.drive_folder_id, type: 'SUA' })}
                             className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
                           >
-                            <FolderOpen size={16} /> File sửa
-                          </a>
+                            <FolderOpen size={16} /> Tải File Sửa
+                          </button>
                           <button 
                             onClick={() => handleViewPhotos(c.id, c.code)}
                             className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 hover:scale-105 active:scale-95 transition-all shadow-sm"
@@ -429,6 +428,15 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      {/* Modal Tải File Trực Tiếp */}
+      {uploadFolder && (
+        <AdminUploader 
+          folderId={uploadFolder.id} 
+          type={uploadFolder.type} 
+          onClose={() => setUploadFolder(null)} 
+        />
+      )}
+
     </main>
   );
 }
