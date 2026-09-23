@@ -365,45 +365,55 @@ export default function AdminPage() {
       {/* Modal Xem Ảnh Chọn */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-zinc-950 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-white/10">
-            <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
+          <div className="bg-zinc-950 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Images size={20} className="text-purple-400" /> Khách: {modalClientCode}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">✕</button>
             </div>
             
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1">
               {loadingPhotos ? (
-                <div className="flex justify-center py-8">
+                <div className="flex justify-center py-16">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
                 </div>
               ) : selectedPhotos.length === 0 ? (
-                <div className="text-center py-8 text-zinc-500 bg-black/30 rounded-xl border border-white/5">
+                <div className="text-center py-16 text-zinc-500 bg-black/30 rounded-xl border border-white/5">
                   Khách chưa chọn bức ảnh nào.
                 </div>
               ) : (
                 <>
-                  <p className="mb-4 font-semibold text-green-400 bg-green-500/10 border border-green-500/20 p-3 rounded-xl inline-block">
+                  <p className="mb-6 font-semibold text-green-400 bg-green-500/10 border border-green-500/20 p-3 rounded-xl inline-block">
                     Tổng cộng: {selectedPhotos.length} ảnh
                   </p>
-                  <ul className="space-y-2 mt-2">
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {selectedPhotos.map((photo, index) => (
-                      <li key={index} className="flex justify-between items-center p-2 bg-black/40 border border-white/5 rounded-xl hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setPreviewIndex(index)}>
-                          <img src={`/api/drive/thumbnail?id=${photo.image_drive_id}`} className="w-12 h-12 object-cover rounded bg-black/50 shrink-0" alt={photo.image_name} />
-                          <span className="text-sm font-mono text-zinc-300 truncate">{photo.image_name}</span>
+                      <div key={index} className="bg-black/40 border border-white/5 rounded-xl overflow-hidden group flex flex-col relative">
+                        <div className="aspect-square cursor-pointer overflow-hidden bg-black/50" onClick={() => setPreviewIndex(index)}>
+                          <img 
+                            src={`/api/drive/thumbnail?id=${photo.image_drive_id}`} 
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" 
+                            alt={photo.image_name} 
+                            loading="lazy"
+                          />
                         </div>
-                        <button 
-                          onClick={() => handleDownloadSingle(photo.image_drive_id, photo.image_name)}
-                          className="p-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg shrink-0 ml-2 transition-colors"
-                          title="Tải ảnh này"
-                        >
-                          <Download size={16} />
-                        </button>
-                      </li>
+                        <div className="p-3 flex justify-between items-center gap-2 bg-white/5">
+                          <span className="text-xs font-mono text-zinc-300 truncate flex-1" title={photo.image_name}>
+                            {photo.image_name}
+                          </span>
+                          <button 
+                            onClick={() => handleDownloadSingle(photo.image_drive_id, photo.image_name)}
+                            className="p-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg shrink-0 transition-colors"
+                            title="Tải ảnh này"
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                   
                   <div className="mt-6 flex flex-col gap-3">
                     <button 
