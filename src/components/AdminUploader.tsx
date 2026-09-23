@@ -266,7 +266,12 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
               {existingFiles.map((file, idx) => (
                 <div key={file.id + idx} className="aspect-square bg-black/40 rounded-xl overflow-hidden border border-white/10 relative group">
-                  {file.mimeType?.includes('video') ? (
+                  {file.mimeType === 'application/vnd.google-apps.folder' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-purple-900/20 text-purple-400">
+                      <Folder size={32} className="mb-2" fill="currentColor" fillOpacity={0.2} />
+                      <span className="text-xs font-bold truncate w-full px-2 text-center">{file.name}</span>
+                    </div>
+                  ) : file.mimeType?.includes('video') ? (
                     <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/20 text-blue-400">
                       <Film size={24} className="mb-2" />
                       <span className="text-[10px] truncate w-full px-2 text-center">{file.name}</span>
@@ -279,9 +284,11 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
                       loading="lazy"
                     />
                   )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
-                    <p className="text-xs text-white truncate w-full">{file.name}</p>
-                  </div>
+                  {file.mimeType !== 'application/vnd.google-apps.folder' && (
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
+                      <p className="text-xs text-white truncate w-full">{file.name}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
