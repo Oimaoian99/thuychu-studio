@@ -249,19 +249,19 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         </button>
       </div>
 
-      <div className="h-[40vh] md:h-[45vh] shrink-0 overflow-hidden flex flex-col md:flex-row">
+      <div className="h-48 md:h-56 shrink-0 overflow-hidden flex flex-col md:flex-row border-b border-white/10">
         {/* Vùng Drop zone */}
-        <div className="w-full md:w-1/2 p-6 flex flex-col h-full border-r border-white/10">
+        <div className="w-full md:w-1/2 p-4 flex flex-col h-full border-r border-white/10">
           <div 
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-3xl cursor-pointer transition-all ${isDragging ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
+            className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl cursor-pointer transition-all ${isDragging ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
           >
-            <UploadCloud size={64} className={`mb-6 ${isDragging ? 'text-purple-400' : 'text-zinc-500'}`} />
-            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 text-center px-4">Kéo thả ảnh/video vào đây</h3>
-            <p className="text-zinc-400 text-center px-4 text-sm">Sẽ tải vào thư mục hiện tại</p>
+            <UploadCloud size={40} className={`mb-3 ${isDragging ? 'text-purple-400' : 'text-zinc-500'}`} />
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 text-center px-4">Kéo thả ảnh/video vào đây</h3>
+            <p className="text-zinc-400 text-center px-4 text-xs">Sẽ tải vào thư mục hiện tại</p>
             <input 
               type="file" 
               multiple 
