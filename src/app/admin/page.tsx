@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -10,10 +10,10 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import AdminUploader from "@/components/AdminUploader";
 
-export default function AdminPage() {
+function AdminContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const secret = searchParams.get('key');
+  const secret = searchParams?.get('key');
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -553,4 +553,12 @@ export default function AdminPage() {
 
     </main>
   );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>}>
+      <AdminContent />
+    </Suspense>
+  )
 }
