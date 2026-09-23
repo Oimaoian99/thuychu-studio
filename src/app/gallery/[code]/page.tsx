@@ -240,7 +240,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           </div>
         ) : (
           <div className="space-y-12">
-            {Object.entries(groupedImages).map(([folderName, images]) => (
+            {Object.entries(groupedImages as Record<string, any[]>).map(([folderName, images]: [string, any[]]) => (
               <div key={folderName}>
                 {showHeaders && (
                   <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3 pl-2 border-l-4 border-purple-500">
@@ -250,7 +250,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                   </h2>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                  {images.map((img) => {
+                  {images.map((img: any) => {
                     const isSelected = selected.has(img.id);
                     const isVideo = img.mimeType?.includes('video/');
                     const index = img.globalIndex;

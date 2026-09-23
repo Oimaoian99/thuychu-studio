@@ -35,7 +35,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
         url: url, 
         downloadUrl: file.webContentLink,
         mimeType: file.mimeType || '',
-        folderName: folderName || null // Lưu thêm tên folder để phân nhóm
+        folderName: folderName || null
       };
     };
 
@@ -51,7 +51,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       const directFiles = files.filter(f => f.mimeType?.includes('image/') || f.mimeType?.includes('video/'));
       const subfolders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
       
-      let allFiles = directFiles.map(f => formatImage(f, null));
+      let allFiles = directFiles.map(f => formatImage(f, undefined));
       
       // Lấy thêm ảnh từ các thư mục con (chạy song song cho nhanh)
       if (subfolders.length > 0) {
@@ -61,7 +61,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
             fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
             pageSize: 1000,
           });
-          return (subRes.data.files || []).map(f => formatImage(f, folder.name));
+          return (subRes.data.files || []).map(f => formatImage(f, folder.name || undefined));
         });
         
         const subfolderFilesArrays = await Promise.all(subfolderPromises);
@@ -76,11 +76,11 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     let editedFiles: any[] = [];
 
     // 3. Lấy ảnh và video từ thư mục GOC (bao gồm cả thư mục con)
-    const rawTargetId = gocFolder ? gocFolder.id : client.drive_folder_id;
+    const rawTargetId = gocFolder ? (gocFolder.id as string) : (client.drive_folder_id as string);
     rawFiles = await fetchImagesAndSubfolders(rawTargetId);
 
     // 4. Lấy ảnh và video từ thư mục SUA (nếu có)
-    if (suaFolder) {
+    if (suaFolder && suaFolder.id) {
       editedFiles = await fetchImagesAndSubfolders(suaFolder.id);
     }
 
