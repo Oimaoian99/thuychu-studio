@@ -5,8 +5,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
   
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   const redirectUri = `${url.origin}/api/admin/setup-google`;
 
   if (!clientId || !clientSecret) {
@@ -14,6 +14,10 @@ export async function GET(req: Request) {
       error: 'Vui lòng thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET vào file .env.local trước' 
     });
   }
+
+  console.log("CLIENT_ID LENGTH:", clientId.length);
+  console.log("CLIENT_SECRET LENGTH:", clientSecret.length);
+  console.log("CLIENT_SECRET ENDS WITH:", clientSecret.charCodeAt(clientSecret.length - 1));
 
   const oauth2Client = new google.auth.OAuth2(
     clientId,

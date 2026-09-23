@@ -5,11 +5,11 @@ let auth: any;
 if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Dùng OAuth2 của người thật (có 5TB quota)
   auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
+    process.env.GOOGLE_CLIENT_ID.trim(),
+    process.env.GOOGLE_CLIENT_SECRET.trim()
   );
   auth.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim()
   });
 } else {
   // Dùng Service Account cũ (0 byte quota)

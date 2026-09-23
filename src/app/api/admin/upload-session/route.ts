@@ -10,8 +10,8 @@ export async function POST(req: Request) {
     }
 
     // Lấy Access Token từ cấu hình Google Auth
-    const authClient = await (drive as any).context._options.auth.getClient();
-    const token = await authClient.getAccessToken();
+    const auth: any = (drive as any).context._options.auth;
+    const token = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
 
     if (!token.token) {
       throw new Error("Không thể lấy token xác thực từ Google.");
