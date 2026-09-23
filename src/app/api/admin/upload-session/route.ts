@@ -3,7 +3,7 @@ import { drive } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
-    const { name, mimeType, parentId, type, exactFolderId } = await req.json();
+    const { name, mimeType, parentId, type, exactFolderId, origin } = await req.json();
 
     if (!name || (!exactFolderId && (!parentId || !type))) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Gọi Google Drive API v3 để tạo Resumable Upload Session
-    const origin = req.headers.get('origin') || 'https://thuychustudio.com';
+    const requestOrigin = origin || req.headers.get('origin') || 'https://thuychustudio.com';
     
     const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
       method: 'POST',
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         'Authorization': `Bearer ${token.token}`,
         'Content-Type': 'application/json',
         'X-Upload-Content-Type': mimeType || 'application/octet-stream',
-        'Origin': origin
+        'Origin': requestOrigin
       },
       body: JSON.stringify({
         name,

@@ -136,7 +136,8 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     try {
       const body: any = {
         name: uploadItem.file.name,
-        mimeType: uploadItem.file.type
+        mimeType: uploadItem.file.type || 'application/octet-stream',
+        origin: window.location.origin
       };
 
       if (currentFolder) {
