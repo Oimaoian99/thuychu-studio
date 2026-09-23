@@ -21,7 +21,8 @@ export async function GET(req: Request) {
 
     // Fetch the thumbnail using the server
     const auth: any = drive.context._options.auth;
-    const token = await auth.getAccessToken();
+    const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
+    const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 
     const response = await fetch(thumbnailUrl, {
       headers: {

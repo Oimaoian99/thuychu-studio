@@ -12,9 +12,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
 
-    // Lấy token để gọi trực tiếp Google Drive API qua fetch
     const auth: any = drive.context._options.auth;
-    const token = await auth.getAccessToken();
+    const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
+    const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 
     const rangeHeader = req.headers.get('range');
     const fetchHeaders: any = {
@@ -36,10 +36,7 @@ export async function GET(req: Request) {
       responseHeaders.set('Content-Type', 'application/octet-stream'); // Force download
     } else {
       responseHeaders.set('Content-Disposition', `inline; filename="${encodeURIComponent(name)}"`);
-      const ct = responseHeaders.get('Content-Type');
-      if (!ct || !ct.startsWith('video/')) {
-        responseHeaders.set('Content-Type', 'video/mp4'); // Fallback to mp4 for playing
-      }
+      // Giữ nguyên Content-Type gốc của Google Drive (để ảnh hiển thị đúng là ảnh, video là video)
     }
 
     return new Response(response.body, {
