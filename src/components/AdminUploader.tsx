@@ -100,6 +100,10 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     }
   };
 
+  const uploadQueueRef = useRef<UploadingFile[]>([]);
+  const activeUploadsRef = useRef(0);
+  const MAX_CONCURRENT = 3; // Tối đa 3 file up cùng lúc
+
   const addFiles = (newFiles: File[]) => {
     const newUploads = newFiles.map(file => ({
       id: Math.random().toString(36).substring(7),
@@ -109,7 +113,21 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     }));
     setFiles(prev => [...prev, ...newUploads]);
     
-    newUploads.forEach(startUpload);
+    uploadQueueRef.current.push(...newUploads);
+    processQueue();
+  };
+
+  const processQueue = () => {
+    while (activeUploadsRef.current < MAX_CONCURRENT && uploadQueueRef.current.length > 0) {
+      const nextFile = uploadQueueRef.current.shift();
+      if (nextFile) {
+        activeUploadsRef.current++;
+        startUpload(nextFile).finally(() => {
+          activeUploadsRef.current--;
+          processQueue(); // Đệ quy gọi lại khi file xong
+        });
+      }
+    }
   };
 
   const startUpload = async (uploadItem: UploadingFile) => {
@@ -139,40 +157,45 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         throw new Error(sessionData.error || "Không thể khởi tạo phiên tải lên.");
       }
 
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', sessionData.uploadUrl, true);
-      xhr.setRequestHeader('Content-Type', uploadItem.file.type || 'application/octet-stream');
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', sessionData.uploadUrl, true);
+        xhr.setRequestHeader('Content-Type', uploadItem.file.type || 'application/octet-stream');
 
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100);
-          updateFileStatus(uploadItem.id, 'uploading', percentComplete);
-        }
-      };
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            updateFileStatus(uploadItem.id, 'uploading', percentComplete);
+          }
+        };
 
-      xhr.onload = () => {
-        if (xhr.status === 200 || xhr.status === 201) {
-          updateFileStatus(uploadItem.id, 'success', 100);
-          try {
-            const responseData = JSON.parse(xhr.responseText);
-            if (responseData.id) {
-              setExistingFiles(prev => [{
-                id: responseData.id,
-                name: responseData.name || uploadItem.file.name,
-                mimeType: uploadItem.file.type
-              }, ...prev]);
-            }
-          } catch(e) {}
-        } else {
-          updateFileStatus(uploadItem.id, 'error', 0, `Lỗi Server: ${xhr.status}`);
-        }
-      };
+        xhr.onload = () => {
+          if (xhr.status === 200 || xhr.status === 201) {
+            updateFileStatus(uploadItem.id, 'success', 100);
+            try {
+              const responseData = JSON.parse(xhr.responseText);
+              if (responseData.id) {
+                setExistingFiles(prev => [{
+                  id: responseData.id,
+                  name: responseData.name || uploadItem.file.name,
+                  mimeType: uploadItem.file.type
+                }, ...prev]);
+              }
+            } catch(e) {}
+            resolve();
+          } else {
+            updateFileStatus(uploadItem.id, 'error', 0, `Lỗi Server: ${xhr.status}`);
+            resolve(); // Resolve to free queue slot even on error
+          }
+        };
 
-      xhr.onerror = () => {
-        updateFileStatus(uploadItem.id, 'error', 0, "Lỗi kết nối mạng.");
-      };
+        xhr.onerror = () => {
+          updateFileStatus(uploadItem.id, 'error', 0, "Lỗi kết nối mạng.");
+          resolve(); // Free queue slot on error
+        };
 
-      xhr.send(uploadItem.file);
+        xhr.send(uploadItem.file);
+      });
     } catch (err: any) {
       updateFileStatus(uploadItem.id, 'error', 0, err.message);
     }
