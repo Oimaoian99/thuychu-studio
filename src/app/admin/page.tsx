@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -10,6 +11,10 @@ import { saveAs } from "file-saver";
 import AdminUploader from "@/components/AdminUploader";
 
 export default function AdminPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const secret = searchParams.get('key');
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -40,8 +45,13 @@ export default function AdminPage() {
     if (isAuth === "true") {
       setIsAuthenticated(true);
       fetchClients();
+    } else {
+      // Nếu chưa đăng nhập, và không có đúng chìa khóa bí mật, đá về trang chủ
+      if (secret !== 'thuychu') {
+        router.replace('/');
+      }
     }
-  }, []);
+  }, [secret, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +189,9 @@ export default function AdminPage() {
   };
 
   if (!isAuthenticated) {
+    if (secret !== 'thuychu') {
+      return null;
+    }
     return (
       <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
