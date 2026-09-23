@@ -158,48 +158,54 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         throw new Error(sessionData.error || "Không thể khởi tạo phiên tải lên.");
       }
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', sessionData.uploadUrl, true);
-        xhr.setRequestHeader('Content-Type', uploadItem.file.type || 'application/octet-stream');
-        if (sessionData.token) {
-          xhr.setRequestHeader('Authorization', `Bearer ${sessionData.token}`);
+      const file = uploadItem.file;
+      const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB per chunk (phải là bội số của 256KB)
+      let offset = 0;
+      let finalData = null;
+
+      while (offset < file.size) {
+        const end = Math.min(offset + CHUNK_SIZE, file.size);
+        const chunk = file.slice(offset, end);
+        const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
+        
+        const chunkRes = await fetch('/api/admin/upload-chunk', {
+          method: 'PUT',
+          headers: {
+            'x-upload-url': sessionData.uploadUrl,
+            'x-content-range': contentRange,
+            'Content-Type': 'application/octet-stream'
+          },
+          body: chunk
+        });
+        
+        if (!chunkRes.ok) {
+          throw new Error(`Lỗi up chunk: ${chunkRes.status}`);
         }
+        
+        const chunkData = await chunkRes.json();
+        if (chunkData.error) {
+          throw new Error(chunkData.error);
+        }
+        
+        const percentComplete = Math.round((end / file.size) * 100);
+        updateFileStatus(uploadItem.id, 'uploading', percentComplete);
+        
+        if (chunkData.status === 'complete') {
+          finalData = chunkData.data;
+          break;
+        }
+        
+        offset = end;
+      }
 
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            updateFileStatus(uploadItem.id, 'uploading', percentComplete);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 201) {
-            updateFileStatus(uploadItem.id, 'success', 100);
-            try {
-              const responseData = JSON.parse(xhr.responseText);
-              if (responseData.id) {
-                setExistingFiles(prev => [{
-                  id: responseData.id,
-                  name: responseData.name || uploadItem.file.name,
-                  mimeType: uploadItem.file.type
-                }, ...prev]);
-              }
-            } catch(e) {}
-            resolve();
-          } else {
-            updateFileStatus(uploadItem.id, 'error', 0, `Lỗi Server: ${xhr.status}`);
-            resolve(); // Resolve to free queue slot even on error
-          }
-        };
-
-        xhr.onerror = () => {
-          updateFileStatus(uploadItem.id, 'error', 0, "Lỗi kết nối mạng.");
-          resolve(); // Free queue slot on error
-        };
-
-        xhr.send(uploadItem.file);
-      });
+      if (finalData && finalData.id) {
+        updateFileStatus(uploadItem.id, 'success', 100);
+        setExistingFiles(prev => [{
+          id: finalData.id,
+          name: finalData.name || file.name,
+          mimeType: file.type
+        }, ...prev]);
+      }
     } catch (err: any) {
       updateFileStatus(uploadItem.id, 'error', 0, err.message);
     }
