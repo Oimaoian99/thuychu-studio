@@ -3,10 +3,10 @@ import { drive } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
-    const { name, mimeType, parentId, type } = await req.json();
+    const { name, mimeType, parentId, type, exactFolderId } = await req.json();
 
-    if (!name || !parentId || !type) {
-      return NextResponse.json({ error: 'Missing name, parentId, or type' }, { status: 400 });
+    if (!name || (!exactFolderId && (!parentId || !type))) {
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
     // Lấy Access Token từ cấu hình Google Auth
@@ -17,17 +17,21 @@ export async function POST(req: Request) {
       throw new Error("Không thể lấy token xác thực từ Google.");
     }
 
-    // 1. Tìm thư mục con (GOC hoặc SUA) bên trong parentId
-    const folderRes = await drive.files.list({
-      q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`,
-      fields: 'files(id)',
-    });
+    let targetFolderId = exactFolderId;
 
-    const folders = folderRes.data.files || [];
-    if (folders.length === 0) {
-      throw new Error(`Không tìm thấy thư mục ${type} bên trong thư mục khách hàng.`);
+    if (!targetFolderId) {
+      // 1. Tìm thư mục con (GOC hoặc SUA) bên trong parentId
+      const folderRes = await drive.files.list({
+        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`,
+        fields: 'files(id)',
+      });
+
+      const folders = folderRes.data.files || [];
+      if (folders.length === 0) {
+        throw new Error(`Không tìm thấy thư mục ${type} bên trong thư mục khách hàng.`);
+      }
+      targetFolderId = folders[0].id;
     }
-    const targetFolderId = folders[0].id;
 
     // 2. Gọi Google Drive API v3 để tạo Resumable Upload Session
     const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {

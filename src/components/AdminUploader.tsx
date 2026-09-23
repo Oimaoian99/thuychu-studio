@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle, Image as ImageIcon, Film, Folder } from "lucide-react";
+import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle, Image as ImageIcon, Film, Folder, ChevronRight, ChevronLeft, Download, Plus } from "lucide-react";
+import CustomVideoPlayer from "./CustomVideoPlayer"; // Assuming we can use this
 
 interface AdminUploaderProps {
   folderId: string;
@@ -25,13 +26,33 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
 
-  const fetchExistingFiles = async () => {
+  // Stack navigation
+  const [folderStack, setFolderStack] = useState<{id: string, name: string}[]>([]);
+  const [rootResolved, setRootResolved] = useState(false);
+
+  // Lightbox
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  // Create folder
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const currentFolder = folderStack.length > 0 ? folderStack[folderStack.length - 1] : null;
+
+  const fetchExistingFiles = async (exactFolderId?: string) => {
     setLoadingFiles(true);
     try {
-      const res = await fetch(`/api/admin/drive/list?parentId=${folderId}&type=${type}`);
+      const url = exactFolderId 
+        ? `/api/admin/drive/list?exactFolderId=${exactFolderId}`
+        : `/api/admin/drive/list?parentId=${folderId}&type=${type}`;
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success) {
         setExistingFiles(json.files);
+        if (!exactFolderId && json.folderId && folderStack.length === 0) {
+          setFolderStack([{ id: json.folderId, name: type }]);
+          setRootResolved(true);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -40,8 +61,20 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
   };
 
   useEffect(() => {
-    fetchExistingFiles();
-  }, [folderId, type]);
+    if (folderStack.length === 0 && !rootResolved) {
+      fetchExistingFiles();
+    } else if (currentFolder) {
+      fetchExistingFiles(currentFolder.id);
+    }
+  }, [currentFolder?.id, rootResolved]);
+
+  const handleNavigateIn = (folderId: string, folderName: string) => {
+    setFolderStack(prev => [...prev, { id: folderId, name: folderName }]);
+  };
+
+  const handleNavigateOut = (index: number) => {
+    setFolderStack(prev => prev.slice(0, index + 1));
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -76,7 +109,6 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     }));
     setFiles(prev => [...prev, ...newUploads]);
     
-    // Tự động bắt đầu tải lên
     newUploads.forEach(startUpload);
   };
 
@@ -84,16 +116,22 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     updateFileStatus(uploadItem.id, 'uploading', 0);
     
     try {
-      // Bước 1: Xin URL upload (bỏ qua giới hạn Vercel)
+      const body: any = {
+        name: uploadItem.file.name,
+        mimeType: uploadItem.file.type
+      };
+
+      if (currentFolder) {
+        body.exactFolderId = currentFolder.id;
+      } else {
+        body.parentId = folderId;
+        body.type = type;
+      }
+
       const sessionRes = await fetch('/api/admin/upload-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: uploadItem.file.name,
-          mimeType: uploadItem.file.type,
-          parentId: folderId,
-          type: type
-        })
+        body: JSON.stringify(body)
       });
       
       const sessionData = await sessionRes.json();
@@ -101,7 +139,6 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         throw new Error(sessionData.error || "Không thể khởi tạo phiên tải lên.");
       }
 
-      // Bước 2: Bắn thẳng dữ liệu lên Google Drive qua XMLHttpRequest để đo được phần trăm
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', sessionData.uploadUrl, true);
       xhr.setRequestHeader('Content-Type', uploadItem.file.type || 'application/octet-stream');
@@ -145,6 +182,37 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status, progress, errorMsg } : f));
   };
 
+  const createFolder = async () => {
+    if (!newFolderName.trim() || !currentFolder) return;
+    setIsCreatingFolder(true);
+    try {
+      const res = await fetch('/api/admin/drive/create-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFolderName, parentId: currentFolder.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setExistingFiles(prev => [data.folder, ...prev]);
+        setNewFolderName("");
+      } else {
+        alert("Lỗi tạo thư mục: " + data.error);
+      }
+    } catch (e: any) {
+      alert("Lỗi tạo thư mục: " + e.message);
+    }
+    setIsCreatingFolder(false);
+  };
+
+  const handleDownload = (fileId: string, fileName: string) => {
+    const link = document.createElement("a");
+    link.href = `/api/drive/proxy?id=${fileId}&action=download`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const totalFiles = files.length;
   const completedFiles = files.filter(f => f.status === 'success').length;
   const errorFiles = files.filter(f => f.status === 'error').length;
@@ -156,9 +224,22 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
             <UploadCloud className="text-purple-400" /> 
-            Tải lên thư mục: <span className={type === 'GOC' ? 'text-blue-400' : 'text-emerald-400'}>{type}</span>
+            Quản lý File
           </h2>
-          <p className="text-sm text-zinc-400 mt-1">Files sẽ được đẩy thẳng lên Google Drive (ID: {folderId})</p>
+          <div className="flex items-center gap-2 mt-2 text-sm text-zinc-400">
+            {folderStack.map((folder, index) => (
+              <div key={folder.id} className="flex items-center gap-2">
+                <button 
+                  onClick={() => handleNavigateOut(index)}
+                  className={`hover:text-white transition-colors ${index === folderStack.length - 1 ? 'font-bold text-white' : ''}`}
+                >
+                  {folder.name}
+                </button>
+                {index < folderStack.length - 1 && <ChevronRight size={14} />}
+              </div>
+            ))}
+            {folderStack.length === 0 && <span>Đang tải...</span>}
+          </div>
         </div>
         <button 
           onClick={onClose}
@@ -168,7 +249,7 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+      <div className="h-[40vh] md:h-[45vh] shrink-0 overflow-hidden flex flex-col md:flex-row">
         {/* Vùng Drop zone */}
         <div className="w-full md:w-1/2 p-6 flex flex-col h-full border-r border-white/10">
           <div 
@@ -179,8 +260,8 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
             className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-3xl cursor-pointer transition-all ${isDragging ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
           >
             <UploadCloud size={64} className={`mb-6 ${isDragging ? 'text-purple-400' : 'text-zinc-500'}`} />
-            <h3 className="text-2xl font-bold text-white mb-2 text-center px-4">Kéo thả ảnh/video vào đây</h3>
-            <p className="text-zinc-400 text-center px-4">Hoặc bấm vào để chọn file từ máy</p>
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 text-center px-4">Kéo thả ảnh/video vào đây</h3>
+            <p className="text-zinc-400 text-center px-4 text-sm">Sẽ tải vào thư mục hiện tại</p>
             <input 
               type="file" 
               multiple 
@@ -192,10 +273,10 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         </div>
 
         {/* Danh sách File Tải lên */}
-        <div className="w-full md:w-1/2 flex flex-col h-full bg-black/20 border-b md:border-b-0 border-white/10">
+        <div className="w-full md:w-1/2 flex flex-col h-full bg-black/20">
           <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-            <h3 className="font-bold text-white">Tiến trình tải lên</h3>
-            <div className="flex gap-4 text-sm font-medium">
+            <h3 className="font-bold text-white text-sm">Tiến trình tải lên</h3>
+            <div className="flex gap-4 text-xs font-medium">
               <span className="text-green-400">Xong: {completedFiles}</span>
               {errorFiles > 0 && <span className="text-red-400">Lỗi: {errorFiles}</span>}
               <span className="text-zinc-400">Tổng: {totalFiles}</span>
@@ -204,36 +285,31 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
           
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {files.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-zinc-500">
+              <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
                 Chưa có file nào được chọn
               </div>
             ) : (
               files.map(f => (
-                <div key={f.id} className="bg-white/5 border border-white/10 p-4 rounded-xl flex items-center gap-4">
-                  <div className="p-3 bg-white/10 rounded-lg text-zinc-400 shrink-0">
-                    <FileIcon size={24} />
+                <div key={f.id} className="bg-white/5 border border-white/10 p-3 rounded-xl flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg text-zinc-400 shrink-0">
+                    <FileIcon size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-sm font-bold text-white truncate pr-4">{f.file.name}</p>
-                      <p className="text-xs font-mono text-zinc-400 shrink-0">{(f.file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs font-bold text-white truncate pr-4">{f.file.name}</p>
+                      <p className="text-[10px] font-mono text-zinc-400 shrink-0">{(f.file.size / (1024 * 1024)).toFixed(2)} MB</p>
                     </div>
-                    <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden border border-white/5 relative">
+                    <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden border border-white/5 relative">
                       <div 
                         className={`absolute top-0 left-0 h-full transition-all duration-300 ${f.status === 'error' ? 'bg-red-500' : f.status === 'success' ? 'bg-green-500' : 'bg-purple-500'}`}
                         style={{ width: `${f.progress}%` }}
                       />
                     </div>
                     {f.status === 'error' && (
-                      <p className="text-xs text-red-400 mt-2 truncate flex items-center gap-1">
-                        <AlertCircle size={12} /> {f.errorMsg}
+                      <p className="text-[10px] text-red-400 mt-1 truncate flex items-center gap-1">
+                        <AlertCircle size={10} /> {f.errorMsg}
                       </p>
                     )}
-                  </div>
-                  <div className="shrink-0 flex items-center justify-center w-8">
-                    {f.status === 'success' && <CheckCircle2 className="text-green-500" size={24} />}
-                    {f.status === 'error' && <AlertCircle className="text-red-500" size={24} />}
-                    {f.status === 'uploading' && <span className="text-xs font-bold text-purple-400">{f.progress}%</span>}
                   </div>
                 </div>
               ))
@@ -242,16 +318,35 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         </div>
       </div>
 
-      {/* Danh sách File đã có sẵn (Existing Files) */}
-      <div className="flex-1 flex flex-col border-t border-white/10 bg-zinc-900/50 min-h-[300px]">
-        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
-          <h3 className="font-bold text-white flex items-center gap-2">
+      {/* Danh sách File đã có sẵn */}
+      <div className="flex-1 flex flex-col border-t border-white/10 bg-zinc-900/50 min-h-0">
+        <div className="p-4 border-b border-white/10 flex flex-wrap gap-4 justify-between items-center bg-black/40">
+          <h3 className="font-bold text-white flex items-center gap-2 text-sm sm:text-base">
             <ImageIcon size={18} className="text-blue-400" />
-            Các file đã có trong thư mục ({existingFiles.length})
+            Trong thư mục này ({existingFiles.length})
           </h3>
-          <button onClick={fetchExistingFiles} className="text-sm text-zinc-400 hover:text-white transition-colors underline">
-            Làm mới
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-black/40 border border-white/10 rounded-full overflow-hidden">
+              <input 
+                type="text" 
+                placeholder="Thư mục mới..." 
+                className="bg-transparent text-white px-3 py-1.5 text-sm outline-none w-32 sm:w-48"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && createFolder()}
+              />
+              <button 
+                onClick={createFolder}
+                disabled={isCreatingFolder || !newFolderName.trim()}
+                className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-sm flex items-center gap-1 transition-colors disabled:opacity-50"
+              >
+                <Plus size={16} /> Tạo
+              </button>
+            </div>
+            <button onClick={() => currentFolder && fetchExistingFiles(currentFolder.id)} className="text-sm text-zinc-400 hover:text-white transition-colors underline ml-2">
+              Làm mới
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {loadingFiles ? (
@@ -260,14 +355,24 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
             </div>
           ) : existingFiles.length === 0 ? (
             <div className="flex justify-center items-center h-full text-zinc-500">
-              Chưa có ảnh nào trong thư mục này.
+              Chưa có file/thư mục nào.
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
               {existingFiles.map((file, idx) => (
-                <div key={file.id + idx} className="aspect-square bg-black/40 rounded-xl overflow-hidden border border-white/10 relative group">
+                <div 
+                  key={file.id + idx} 
+                  className="aspect-square bg-black/40 rounded-xl overflow-hidden border border-white/10 relative group cursor-pointer"
+                  onClick={() => {
+                    if (file.mimeType === 'application/vnd.google-apps.folder') {
+                      handleNavigateIn(file.id, file.name);
+                    } else {
+                      setPreviewIndex(idx);
+                    }
+                  }}
+                >
                   {file.mimeType === 'application/vnd.google-apps.folder' ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-purple-900/20 text-purple-400">
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-purple-900/20 text-purple-400 group-hover:bg-purple-900/40 transition-colors">
                       <Folder size={32} className="mb-2" fill="currentColor" fillOpacity={0.2} />
                       <span className="text-xs font-bold truncate w-full px-2 text-center">{file.name}</span>
                     </div>
@@ -295,6 +400,67 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
           )}
         </div>
       </div>
+
+      {/* Lightbox Xem Ảnh (Dành riêng cho Admin) */}
+      {previewIndex !== null && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-xl">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setPreviewIndex(null); }}
+            className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full z-[310] transition-colors"
+          >
+            <X size={24} />
+          </button>
+          
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownload(existingFiles[previewIndex].id, existingFiles[previewIndex].name);
+            }}
+            className="absolute top-4 right-20 sm:top-8 sm:right-24 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full z-[310] transition-colors shadow-lg shadow-blue-500/20"
+            title="Tải ảnh này về"
+          >
+            <Download size={24} />
+          </button>
+
+          {previewIndex > 0 && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+              className="absolute left-4 p-4 text-white hover:bg-white/10 rounded-full z-[310] transition-colors"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+          {previewIndex < existingFiles.length - 1 && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                // Bỏ qua nếu next file là folder
+                let nextIdx = previewIndex + 1;
+                while (nextIdx < existingFiles.length && existingFiles[nextIdx].mimeType === 'application/vnd.google-apps.folder') {
+                  nextIdx++;
+                }
+                if (nextIdx < existingFiles.length) setPreviewIndex(nextIdx);
+              }}
+              className="absolute right-4 p-4 text-white hover:bg-white/10 rounded-full z-[310] transition-colors"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-16">
+            {existingFiles[previewIndex].mimeType?.includes('video/') ? (
+              <CustomVideoPlayer src={existingFiles[previewIndex].id} />
+            ) : (
+              <img 
+                src={`/api/drive/proxy?id=${existingFiles[previewIndex].id}&action=view`}
+                alt={existingFiles[previewIndex].name}
+                className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-black/20"
+              />
+            )}
+            <p className="text-white mt-4 font-mono text-sm opacity-50">{existingFiles[previewIndex].name}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
