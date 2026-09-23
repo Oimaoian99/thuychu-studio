@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download } from "lucide-react";
+import { Trash2, FolderOpen, Images, LogOut, ArrowLeft, Edit2, Download, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import JSZip from "jszip";
 // @ts-ignore
@@ -15,6 +15,8 @@ export default function AdminPage() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [clients, setClients] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [code, setCode] = useState("");
   const [maxSelections, setMaxSelections] = useState(5); // Setup số lượng ảnh
   const [loading, setLoading] = useState(false);
@@ -24,11 +26,14 @@ export default function AdminPage() {
   const [modalClientCode, setModalClientCode] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<any[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   
   const [zipping, setZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState("");
 
   const [uploadFolder, setUploadFolder] = useState<{ id: string, type: string } | null>(null);
+
+  const filteredClients = clients.filter(c => c.code.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => {
     const isAuth = localStorage.getItem("admin_authenticated");
@@ -164,6 +169,15 @@ export default function AdminPage() {
     }
   };
 
+  const handleDownloadSingle = (fileId: string, fileName: string) => {
+    const link = document.createElement("a");
+    link.href = `/api/drive/proxy?id=${fileId}&action=download`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -260,7 +274,21 @@ export default function AdminPage() {
 
           <div className="md:col-span-2">
             <div className="bg-white/5 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/10">
-              <h2 className="text-xl font-bold mb-6">Danh sách Khách hàng</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold">Danh sách Khách hàng</h2>
+                <div className="w-full sm:w-64 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={16} className="text-zinc-500" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Tìm mã khách hàng..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-black/40 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+              </div>
               
               {fetchLoading ? (
                 <div className="flex justify-center py-10">
@@ -270,9 +298,13 @@ export default function AdminPage() {
                 <div className="text-center py-10 text-zinc-500 bg-black/20 rounded-2xl border border-white/5">
                   Chưa có khách hàng nào.
                 </div>
+              ) : filteredClients.length === 0 ? (
+                <div className="text-center py-10 text-zinc-500 bg-black/20 rounded-2xl border border-white/5">
+                  Không tìm thấy khách hàng nào.
+                </div>
               ) : (
                 <div className="space-y-4">
-                  {clients.map((c) => (
+                  {filteredClients.map((c) => (
                     <div key={c.id} className="p-5 border border-white/10 bg-black/20 rounded-2xl hover:bg-white/5 transition-all group">
                       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         <div className="flex-1 w-full min-w-0">
@@ -357,8 +389,18 @@ export default function AdminPage() {
                   </p>
                   <ul className="space-y-2 mt-2">
                     {selectedPhotos.map((photo, index) => (
-                      <li key={index} className="flex justify-between p-3 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-zinc-300 hover:bg-white/5 transition-colors">
-                        {photo.image_name}
+                      <li key={index} className="flex justify-between items-center p-2 bg-black/40 border border-white/5 rounded-xl hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setPreviewIndex(index)}>
+                          <img src={`/api/drive/thumbnail?id=${photo.image_drive_id}`} className="w-12 h-12 object-cover rounded bg-black/50 shrink-0" alt={photo.image_name} />
+                          <span className="text-sm font-mono text-zinc-300 truncate">{photo.image_name}</span>
+                        </div>
+                        <button 
+                          onClick={() => handleDownloadSingle(photo.image_drive_id, photo.image_name)}
+                          className="p-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg shrink-0 ml-2 transition-colors"
+                          title="Tải ảnh này"
+                        >
+                          <Download size={16} />
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -435,6 +477,55 @@ export default function AdminPage() {
           type={uploadFolder.type} 
           onClose={() => setUploadFolder(null)} 
         />
+      )}
+
+      {/* Lightbox Xem Ảnh (Dành riêng cho list ảnh khách chọn) */}
+      {previewIndex !== null && selectedPhotos.length > 0 && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-xl">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setPreviewIndex(null); }}
+            className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full z-[310] transition-colors"
+          >
+            <X size={24} />
+          </button>
+          
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadSingle(selectedPhotos[previewIndex].image_drive_id, selectedPhotos[previewIndex].image_name);
+            }}
+            className="absolute top-4 right-20 sm:top-8 sm:right-24 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full z-[310] transition-colors shadow-lg shadow-blue-500/20"
+            title="Tải ảnh này về"
+          >
+            <Download size={24} />
+          </button>
+
+          {previewIndex > 0 && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+              className="absolute left-4 p-4 text-white hover:bg-white/10 rounded-full z-[310] transition-colors"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+          {previewIndex < selectedPhotos.length - 1 && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+              className="absolute right-4 p-4 text-white hover:bg-white/10 rounded-full z-[310] transition-colors"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-16">
+            <img 
+              src={`/api/drive/proxy?id=${selectedPhotos[previewIndex].image_drive_id}&action=view`}
+              alt={selectedPhotos[previewIndex].image_name}
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-black/20"
+            />
+            <p className="text-white mt-4 font-mono text-sm opacity-50">{selectedPhotos[previewIndex].image_name}</p>
+          </div>
+        </div>
       )}
 
     </main>
