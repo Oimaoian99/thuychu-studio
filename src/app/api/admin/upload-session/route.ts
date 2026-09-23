@@ -61,10 +61,15 @@ export async function POST(req: Request) {
     if (!location) {
       throw new Error("Google không trả về đường dẫn upload hợp lệ.");
     }
+    
+    // Trích xuất upload_id để tránh bị WAF chặn do truyền URL đầy đủ qua header
+    const url = new URL(location);
+    const uploadId = url.searchParams.get('upload_id');
 
     return NextResponse.json({ 
       success: true, 
       uploadUrl: location,
+      uploadId: uploadId,
       token: token.token 
     });
   } catch (error: any) {

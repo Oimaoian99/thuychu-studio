@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { drive } from '@/lib/drive';
 
-export async function PUT(req: Request) {
+export async function POST(req: Request) {
   try {
-    const uploadUrl = req.headers.get('x-upload-url');
+    const uploadId = req.headers.get('x-upload-id');
     const contentRange = req.headers.get('x-content-range');
     
-    if (!uploadUrl || !contentRange) {
+    if (!uploadId || !contentRange) {
       return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
     }
+
+    const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=${uploadId}`;
 
     const authClient = await (drive as any).context._options.auth.getClient();
     const token = await authClient.getAccessToken();

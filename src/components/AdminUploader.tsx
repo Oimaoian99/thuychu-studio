@@ -169,22 +169,22 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
         
         const chunkRes = await fetch('/api/admin/upload-chunk', {
-          method: 'PUT',
+          method: 'POST',
           headers: {
-            'x-upload-url': sessionData.uploadUrl,
+            'x-upload-id': sessionData.uploadId || '',
             'x-content-range': contentRange,
             'Content-Type': 'application/octet-stream'
           },
           body: chunk
         });
         
-        if (!chunkRes.ok) {
-          throw new Error(`Lỗi up chunk: ${chunkRes.status}`);
-        }
-        
-        const chunkData = await chunkRes.json();
-        if (chunkData.error) {
-          throw new Error(chunkData.error);
+        let chunkData: any = {};
+        try {
+          chunkData = await chunkRes.json();
+        } catch (e) {}
+
+        if (!chunkRes.ok || chunkData.error) {
+          throw new Error(chunkData.error || `Lỗi up chunk: ${chunkRes.status}`);
         }
         
         const percentComplete = Math.round((end / file.size) * 100);
