@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { drive } from '@/lib/drive';
 
 export async function PUT(req: Request) {
   try {
@@ -9,11 +10,15 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
     }
 
+    const authClient = await (drive as any).context._options.auth.getClient();
+    const token = await authClient.getAccessToken();
+
     const chunk = await req.arrayBuffer();
     
     const driveRes = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
+        'Authorization': `Bearer ${token.token}`,
         'Content-Length': chunk.byteLength.toString(),
         'Content-Range': contentRange
       },
@@ -31,7 +36,7 @@ export async function PUT(req: Request) {
     
     const errorText = await driveRes.text();
     console.error("Chunk upload error from Google:", errorText);
-    return NextResponse.json({ error: 'Chunk upload failed: ' + driveRes.status }, { status: driveRes.status });
+    return NextResponse.json({ error: `Lỗi Server: ${driveRes.status} - ${errorText}` }, { status: driveRes.status });
   } catch (error: any) {
     console.error("Upload chunk error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
