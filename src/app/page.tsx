@@ -63,7 +63,10 @@ export default function Home() {
           </button>
         </form>
 
-        <div className="mt-10 text-center text-sm text-zinc-500 relative z-10">
+        <div className="mt-10 text-center text-sm text-zinc-500 relative z-10 flex flex-col items-center gap-2">
+          <a href="/admin?key=thuychu" className="font-medium hover:text-white transition-colors flex items-center justify-center gap-2">
+            Dành cho Quản trị viên
+          </a>
           <p>© 2026 ThuyChu Studio. All rights reserved.</p>
         </div>
       </div>
