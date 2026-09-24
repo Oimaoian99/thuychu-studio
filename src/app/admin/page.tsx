@@ -181,7 +181,7 @@ function AdminContent() {
 
   const handleDownloadSingle = (fileId: string, fileName: string) => {
     const link = document.createElement("a");
-    link.href = `/api/drive/proxy?id=${fileId}&action=download`;
+    link.href = `/api/drive/proxy?id=${fileId}&action=download&name=${encodeURIComponent(fileName)}`;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();

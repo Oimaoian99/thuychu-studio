@@ -64,9 +64,7 @@ export default function Home() {
         </form>
 
         <div className="mt-10 text-center text-sm text-zinc-500 relative z-10">
-          <a href="/admin" className="font-medium hover:text-white transition-colors flex items-center justify-center gap-2">
-            Dành cho Quản trị viên
-          </a>
+          <p>© 2026 ThuyChu Studio. All rights reserved.</p>
         </div>
       </div>
     </main>
