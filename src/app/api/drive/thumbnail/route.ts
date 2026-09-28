@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { getDrive } from '@/lib/drive';
+﻿import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -11,23 +11,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
 
-    // Lấy thông tin file bao gồm thumbnailLink
-    const fileRes = await (await getDrive()).files.get({ fileId: id, fields: 'thumbnailLink' });
-    const thumbnailUrl = fileRes.data.thumbnailLink?.replace(/=s\d+/, `=w${w}`);
+    const token = await getAccessToken();
+
+    // Lấy thumbnailLink bằng native fetch
+    const metadataRes = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=thumbnailLink`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const metadata = await metadataRes.json();
+    const thumbnailUrl = metadata.thumbnailLink?.replace(/=s\d+/, `=w${w}`);
 
     if (!thumbnailUrl) {
       return NextResponse.json({ error: 'No thumbnail' }, { status: 404 });
     }
 
-    // Fetch the thumbnail using the server
-    const auth: any = (await getDrive()).context._options.auth;
-    const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
-    const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
-
     const response = await fetch(thumbnailUrl, {
-      headers: {
-        Authorization: `Bearer ${token}` // Có thể cần hoặc không cần
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     const responseHeaders = new Headers(response.headers);

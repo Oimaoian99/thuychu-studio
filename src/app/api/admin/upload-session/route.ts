@@ -1,79 +1,66 @@
-import { NextResponse } from 'next/server';
-import { getDrive } from '@/lib/drive';
+﻿import { NextResponse } from 'next/server';
+import { getAccessToken, driveListFiles } from '@/lib/drive';
+import { getSupabase } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
-    const { name, mimeType, parentId, type, exactFolderId, origin } = await req.json();
+    const { file, clientId, type } = await req.json();
 
-    if (!name || (!exactFolderId && (!parentId || !type))) {
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    if (!file || !clientId || !type) {
+      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    // Lấy Access Token từ cấu hình Google Auth
-    const auth: any = ((await getDrive()) as any).context._options.auth;
-    const token = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
+    const token = await getAccessToken();
 
-    if (!token.token) {
-      throw new Error("Không thể lấy token xác thực từ Google.");
+    if (!token) {
+      throw new Error("Không thể lấy token xác thực Google Drive");
     }
 
-    let targetFolderId = exactFolderId;
+    const { data: client, error } = await getSupabase().from('clients').select('*').eq('id', clientId).single();
+    if (error || !client) throw new Error("Khách hàng không tồn tại");
 
-    if (!targetFolderId) {
-      // 1. Tìm thư mục con (GOC hoặc SUA) bên trong parentId
-      const folderRes = await (await getDrive()).files.list({
-        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`,
-        fields: 'files(id)',
-      });
-
-      const folders = folderRes.data.files || [];
-      if (folders.length === 0) {
-        throw new Error(`Không tìm thấy thư mục ${type} bên trong thư mục khách hàng.`);
+    let parentId = client.drive_folder_id;
+    if (type === 'GOC' || type === 'SUA') {
+      const folders = await driveListFiles(`'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`, 'files(id)');
+      if (folders && folders.length > 0) {
+        parentId = folders[0].id;
       }
-      targetFolderId = folders[0].id;
     }
 
-    // 2. Gọi Google Drive API v3 để tạo Resumable Upload Session
-    const requestOrigin = origin || req.headers.get('origin') || 'https://thuychustudio.com';
+    const requestOrigin = req.headers.get('origin') || 'https://thuychustudio.id.vn';
     
     const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token.token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'X-Upload-Content-Type': mimeType || 'application/octet-stream',
+        'X-Upload-Content-Type': file.type,
+        'X-Upload-Content-Length': file.size.toString(),
         'Origin': requestOrigin
       },
       body: JSON.stringify({
-        name,
-        parents: [targetFolderId]
+        name: file.name,
+        parents: [parentId]
       })
     });
-    
-    // Nếu tạo session thành công, Google sẽ trả về 200 OK cùng header 'Location' chứa URL để up file
+
     if (!initRes.ok) {
       const errorText = await initRes.text();
       console.error("Google Drive API Error:", errorText);
       throw new Error("Lỗi khi xin quyền upload từ Google: " + initRes.statusText);
     }
 
-    const location = initRes.headers.get('Location');
-    if (!location) {
-      throw new Error("Google không trả về đường dẫn upload hợp lệ.");
+    const uploadUrl = initRes.headers.get('location');
+    if (!uploadUrl) {
+      throw new Error("Không lấy được URL upload (Location header bị thiếu)");
     }
-    
-    // Trích xuất upload_id để tránh bị WAF chặn do truyền URL đầy đủ qua header
-    const url = new URL(location);
-    const uploadId = url.searchParams.get('upload_id');
 
-    return NextResponse.json({ 
-      success: true, 
-      uploadUrl: location,
-      uploadId: uploadId,
-      token: token.token 
-    });
+    const urlObj = new URL(uploadUrl);
+    const uploadId = urlObj.searchParams.get('upload_id');
+
+    return NextResponse.json({ success: true, uploadId });
   } catch (error: any) {
-    console.error("Upload Session Error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Lỗi cấp upload session:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

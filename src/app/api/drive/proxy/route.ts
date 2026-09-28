@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { getDrive } from '@/lib/drive';
+﻿import { NextResponse } from 'next/server';
+import { getAccessToken } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -12,9 +12,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
 
-    const auth: any = (await getDrive()).context._options.auth;
-    const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
-    const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
+    const token = await getAccessToken();
 
     const rangeHeader = req.headers.get('range');
     const fetchHeaders: any = {
@@ -36,7 +34,6 @@ export async function GET(req: Request) {
       responseHeaders.set('Content-Type', 'application/octet-stream'); // Force download
     } else {
       responseHeaders.set('Content-Disposition', `inline; filename="${encodeURIComponent(name)}"`);
-      // Giữ nguyên Content-Type gốc của Google Drive (để ảnh hiển thị đúng là ảnh, video là video)
     }
 
     return new Response(response.body, {

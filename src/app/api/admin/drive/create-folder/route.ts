@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { getDrive } from '@/lib/drive';
+﻿import { NextResponse } from 'next/server';
+import { driveCreateFolder } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
@@ -9,18 +9,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing name or parentId' }, { status: 400 });
     }
 
-    const res = await (await getDrive()).files.create({
-      requestBody: {
-        name,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [parentId]
-      },
-      fields: 'id, name, mimeType'
-    });
-
-    return NextResponse.json({ success: true, folder: res.data });
+    const folderId = await driveCreateFolder(name, [parentId]);
+    return NextResponse.json({ success: true, folderId });
   } catch (error: any) {
-    console.error("Create folder error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
