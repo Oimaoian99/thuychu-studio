@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     // Tìm thư mục con GOC hoặc SUA trong thư mục của khách hàng
-    const subfoldersRes = await getDrive().files.list({
+    const subfoldersRes = await (await getDrive()).files.list({
       q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name contains '${type}' and trashed = false`,
       fields: 'files(id, name)',
     });

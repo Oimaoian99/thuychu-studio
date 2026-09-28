@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Lấy luồng dữ liệu file từ Google Drive
-    const response = await getDrive().files.get(
+    const response = await (await getDrive()).files.get(
       { fileId: id, alt: 'media' },
       { 
         responseType: 'stream',

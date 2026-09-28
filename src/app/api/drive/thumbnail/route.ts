@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     // Lấy thông tin file bao gồm thumbnailLink
-    const fileRes = await getDrive().files.get({ fileId: id, fields: 'thumbnailLink' });
+    const fileRes = await (await getDrive()).files.get({ fileId: id, fields: 'thumbnailLink' });
     const thumbnailUrl = fileRes.data.thumbnailLink?.replace(/=s\d+/, `=w${w}`);
 
     if (!thumbnailUrl) {
