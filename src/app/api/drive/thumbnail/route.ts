@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     }
 
     // Fetch the thumbnail using the server
-    const auth: any = getDrive().context._options.auth;
+    const auth: any = (await getDrive()).context._options.auth;
     const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
     const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 

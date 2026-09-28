@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
 
-    const auth: any = getDrive().context._options.auth;
+    const auth: any = (await getDrive()).context._options.auth;
     const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
     const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 

@@ -31,7 +31,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       const buffer = Buffer.from(await file.arrayBuffer());
       const stream = Readable.from(buffer);
 
-      const driveRes = await getDrive().files.create({
+      const driveRes = await (await getDrive()).files.create({
         requestBody: {
           name: file.name,
           parents: [client.drive_folder_id],

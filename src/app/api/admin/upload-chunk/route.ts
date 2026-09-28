@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=${uploadId}`;
 
-    const auth: any = (getDrive() as any).context._options.auth;
+    const auth: any = ((await getDrive()) as any).context._options.auth;
     const token = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
 
     const chunk = await req.arrayBuffer();

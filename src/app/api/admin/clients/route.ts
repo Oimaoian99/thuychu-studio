@@ -18,14 +18,14 @@ export async function POST(req: Request) {
       mimeType: 'application/vnd.google-apps.folder',
       parents: [process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!],
     };
-    const rootDriveRes = await getDrive().files.create({ requestBody: rootMetadata, fields: 'id' });
+    const rootDriveRes = await (await getDrive()).files.create({ requestBody: rootMetadata, fields: 'id' });
     const rootFolderId = rootDriveRes.data.id;
 
     if (!rootFolderId) throw new Error("Không thể tạo thư mục Drive");
 
     // 2. Tạo 2 thư mục con (GOC và SUA)
-    await getDrive().files.create({ requestBody: { name: 'GOC', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
-    await getDrive().files.create({ requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
+    await (await getDrive()).files.create({ requestBody: { name: 'GOC', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
+    await (await getDrive()).files.create({ requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
 
     // 3. Lưu thông tin vào Supabase kèm theo giới hạn ảnh
     const { data, error } = await getSupabase()

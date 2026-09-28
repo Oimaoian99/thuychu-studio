@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing name or parentId' }, { status: 400 });
     }
 
-    const res = await getDrive().files.create({
+    const res = await (await getDrive()).files.create({
       requestBody: {
         name,
         mimeType: 'application/vnd.google-apps.folder',

@@ -1,21 +1,6 @@
-import { google } from 'googleapis';
+﻿import { google } from 'googleapis';
 
-// Patch global fetch to remove gaxios accept-encoding header which causes binary garbage on Cloudflare Workers
-const originalFetch = globalThis.fetch;
-globalThis.fetch = async function(url, options) {
-  if (options && options.headers) {
-    if (options.headers instanceof Headers) {
-      options.headers.delete('accept-encoding');
-      options.headers.delete('Accept-Encoding');
-    } else {
-      delete (options.headers as any)['accept-encoding'];
-      delete (options.headers as any)['accept-encoding'];
-    }
-  }
-  return originalFetch(url, options);
-};
-
-export const getDrive = () => {
+export const getDrive = async () => {
   let auth: any;
 
   if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -23,9 +8,33 @@ export const getDrive = () => {
       process.env.GOOGLE_CLIENT_ID.trim(),
       process.env.GOOGLE_CLIENT_SECRET.trim()
     );
-    auth.setCredentials({
-      refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim()
-    });
+    
+    // NATIVE FETCH TO BYPASS GAXIOS COMPRESSION BUG ON CLOUDFLARE
+    try {
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID.trim(),
+          client_secret: process.env.GOOGLE_CLIENT_SECRET.trim(),
+          refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim(),
+          grant_type: 'refresh_token'
+        }).toString()
+      });
+      const data = await res.json();
+      
+      auth.setCredentials({
+        access_token: data.access_token,
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim()
+      });
+    } catch (e) {
+      console.error("Native fetch token error:", e);
+      auth.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim()
+      });
+    }
   } else {
     const credentials = {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,

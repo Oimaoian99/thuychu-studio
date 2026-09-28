@@ -19,7 +19,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     }
 
     // 2. Lấy danh sách các thư mục con (GOC và SUA)
-    const subfoldersRes = await getDrive().files.list({
+    const subfoldersRes = await (await getDrive()).files.list({
       q: `'${client.drive_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name)',
     });
@@ -42,7 +42,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
 
     // Hàm hỗ trợ lấy ảnh trong thư mục hiện tại + 1 cấp thư mục con
     const fetchImagesAndSubfolders = async (parentId: string) => {
-      const res = await getDrive().files.list({
+      const res = await (await getDrive()).files.list({
         q: `'${parentId}' in parents and trashed = false`,
         fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
         pageSize: 1000,
@@ -57,7 +57,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       // Lấy thêm ảnh từ các thư mục con (chạy song song cho nhanh)
       if (subfolders.length > 0) {
         const subfolderPromises = subfolders.map(async (folder) => {
-          const subRes = await getDrive().files.list({
+          const subRes = await (await getDrive()).files.list({
             q: `'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
             fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
             pageSize: 1000,
