@@ -20,10 +20,10 @@ export async function GET(req: Request) {
     const targetFolder = subfoldersRes.data.files?.[0];
     
     if (targetFolder) {
-      return NextResponse.redirect(`https://getDrive().google.com/drive/folders/${targetFolder.id}`);
+      return NextResponse.redirect(`https://drive.google.com/drive/folders/${targetFolder.id}`);
     } else {
       // Nếu không tìm thấy (lỡ bị xóa), mở thư mục gốc
-      return NextResponse.redirect(`https://getDrive().google.com/drive/folders/${folderId}`);
+      return NextResponse.redirect(`https://drive.google.com/drive/folders/${folderId}`);
     }
   } catch (error: any) {
     console.error(error);
