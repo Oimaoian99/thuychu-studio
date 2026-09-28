@@ -1,5 +1,20 @@
 ﻿import { google } from 'googleapis';
 
+// Patch global fetch to remove gaxios accept-encoding header which causes binary garbage on Cloudflare Workers
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async function(url, options) {
+  if (options && options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.delete('accept-encoding');
+      options.headers.delete('Accept-Encoding');
+    } else {
+      delete options.headers['accept-encoding'];
+      delete options.headers['Accept-Encoding'];
+    }
+  }
+  return originalFetch(url, options);
+};
+
 export const getDrive = () => {
   let auth: any;
 
