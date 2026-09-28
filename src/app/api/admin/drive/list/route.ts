@@ -13,13 +13,13 @@ export async function GET(req: Request) {
 
     let targetFolderId = parentId;
     if (type === 'GOC' || type === 'SUA') {
-      const folders = await driveListFiles('' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '' and trashed = false, 'files(id)');
+      const folders = await driveListFiles(`'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`, 'files(id)');
       if (folders && folders.length > 0) {
         targetFolderId = folders[0].id;
       }
     }
 
-    const files = await driveListFiles('' in parents and trashed = false, 'files(id, name, mimeType)');
+    const files = await driveListFiles(`'${targetFolderId}' in parents and trashed = false`, 'files(id, name, mimeType)');
     
     // Sort files by name naturally
     files.sort((a: any, b: any) => {

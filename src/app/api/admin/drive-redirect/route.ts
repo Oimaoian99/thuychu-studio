@@ -12,17 +12,17 @@ export async function GET(req: Request) {
     }
 
     if (type === 'GOC' || type === 'SUA') {
-      const subfolders = await driveListFiles('' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '' and trashed = false, 'files(id)');
+      const subfolders = await driveListFiles(`'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`, 'files(id)');
       const targetFolder = subfolders?.[0];
       
       if (targetFolder) {
-        return NextResponse.redirect(https://drive.google.com/drive/folders/ + targetFolder.id);
+        return NextResponse.redirect(`https://drive.google.com/drive/folders/` + targetFolder.id);
       } else {
-        return NextResponse.redirect(https://drive.google.com/drive/folders/ + folderId);
+        return NextResponse.redirect(`https://drive.google.com/drive/folders/` + folderId);
       }
     }
     
-    return NextResponse.redirect(https://drive.google.com/drive/folders/ + folderId);
+    return NextResponse.redirect(`https://drive.google.com/drive/folders/` + folderId);
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
