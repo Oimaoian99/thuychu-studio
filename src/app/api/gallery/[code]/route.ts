@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { drive } from '@/lib/drive';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function GET(req: Request, context: { params: Promise<{ code: string }> }) {
   try {
@@ -8,7 +8,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     const decodedCode = decodeURIComponent(code).toUpperCase();
 
     // 1. Tìm thông tin khách hàng từ Database
-    const { data: client, error } = await supabase
+    const { data: client, error } = await getSupabase()
       .from('clients')
       .select('id, drive_folder_id, max_selections')
       .eq('code', decodedCode)
@@ -86,7 +86,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     }
 
     // 3. Lấy những ảnh đã được khách hàng chọn từ trước (nếu có)
-    const { data: selectedImages } = await supabase
+    const { data: selectedImages } = await getSupabase()
       .from('selected_images')
       .select('image_drive_id')
       .eq('client_id', client.id);
@@ -118,7 +118,7 @@ export async function POST(req: Request, context: { params: Promise<{ code: stri
     }
 
     // Để đơn giản: Xóa các lựa chọn cũ của client này và lưu lại danh sách mới
-    await supabase.from('selected_images').delete().eq('client_id', clientId);
+    await getSupabase().from('selected_images').delete().eq('client_id', clientId);
 
     if (selectedImages.length > 0) {
       const insertData = selectedImages.map((img: any) => ({
@@ -127,7 +127,7 @@ export async function POST(req: Request, context: { params: Promise<{ code: stri
         image_name: img.name,
       }));
 
-      const { error } = await supabase.from('selected_images').insert(insertData);
+      const { error } = await getSupabase().from('selected_images').insert(insertData);
       if (error) throw error;
     }
 

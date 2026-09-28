@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { drive } from '@/lib/drive';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic'; // CHỐNG LƯU CACHE CỦA VERCEL
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     await drive.files.create({ requestBody: { name: 'SUA', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] } });
 
     // 3. Lưu thông tin vào Supabase kèm theo giới hạn ảnh
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('clients')
       .insert([{ code, drive_folder_id: rootFolderId, max_selections: max_selections || 5 }])
       .select()
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('clients')
       .select('*')
       .order('created_at', { ascending: false });

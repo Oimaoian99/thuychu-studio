@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
 
-    const { data: selectedImages, error } = await supabase
+    const { data: selectedImages, error } = await getSupabase()
       .from('selected_images')
       .select('image_name, image_drive_id')
       .eq('client_id', id);

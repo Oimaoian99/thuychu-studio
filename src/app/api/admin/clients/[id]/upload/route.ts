@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { drive } from '@/lib/drive';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { Readable } from 'stream';
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -14,7 +14,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     // Lấy Drive Folder ID của khách hàng
-    const { data: client, error } = await supabase
+    const { data: client, error } = await getSupabase()
       .from('clients')
       .select('drive_folder_id')
       .eq('id', clientId)
