@@ -1,30 +1,28 @@
-import { NextResponse } from 'next/server';
-import { getDrive } from '@/lib/drive';
+﻿import { NextResponse } from 'next/server';
+import { driveListFiles } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const folderId = searchParams.get('folderId');
-    const type = searchParams.get('type'); // 'GOC' hoặc 'SUA'
+    const type = searchParams.get('type');
 
-    if (!folderId || !type) {
-      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    if (!folderId) {
+      return NextResponse.json({ error: 'Missing folderId' }, { status: 400 });
     }
 
-    // Tìm thư mục con GOC hoặc SUA trong thư mục của khách hàng
-    const subfoldersRes = await (await getDrive()).files.list({
-      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name contains '${type}' and trashed = false`,
-      fields: 'files(id, name)',
-    });
-
-    const targetFolder = subfoldersRes.data.files?.[0];
+    if (type === 'GOC' || type === 'SUA') {
+      const subfolders = await driveListFiles('' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '' and trashed = false, 'files(id)');
+      const targetFolder = subfolders?.[0];
+      
+      if (targetFolder) {
+        return NextResponse.redirect(https://drive.google.com/drive/folders/ + targetFolder.id);
+      } else {
+        return NextResponse.redirect(https://drive.google.com/drive/folders/ + folderId);
+      }
+    }
     
-    if (targetFolder) {
-      return NextResponse.redirect(`https://drive.google.com/drive/folders/${targetFolder.id}`);
-    } else {
-      // Nếu không tìm thấy (lỡ bị xóa), mở thư mục gốc
-      return NextResponse.redirect(`https://drive.google.com/drive/folders/${folderId}`);
-    }
+    return NextResponse.redirect(https://drive.google.com/drive/folders/ + folderId);
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
