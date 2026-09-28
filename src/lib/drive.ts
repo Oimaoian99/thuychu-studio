@@ -9,7 +9,7 @@ export const getDrive = async () => {
       process.env.GOOGLE_CLIENT_SECRET.trim()
     );
     
-    // NATIVE FETCH TO BYPASS GAXIOS COMPRESSION BUG ON CLOUDFLARE
+    // NATIVE FETCH TO BYPASS GAXIOS COMPRESSION BUG ON CLOUDFLARE FOR TOKEN
     try {
       const res = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -46,6 +46,30 @@ export const getDrive = async () => {
       scopes: ['https://www.googleapis.com/auth/drive'],
     });
   }
+
+  // Cực kỳ quan trọng: Ghi đè phương thức request để vô hiệu hóa GZIP cho mọi API call!
+  const originalRequest = auth.request;
+  auth.request = async function(opts: any) {
+    opts.headers = opts.headers || {};
+    opts.headers['Accept-Encoding'] = 'identity';
+    opts.headers['accept-encoding'] = 'identity';
+    
+    // Fix gaxios returning string instead of JSON object on Cloudflare
+    opts.responseType = 'json';
+    
+    const res = await originalRequest.call(this, opts);
+    
+    // Đề phòng gaxios vẫn trả về string (dù đã cấm gzip), ta ép nó parse JSON
+    if (res && typeof res.data === 'string') {
+      try {
+        res.data = JSON.parse(res.data);
+      } catch (e) {
+        console.error("Lỗi parse JSON thủ công:", res.data.substring(0, 100));
+      }
+    }
+    
+    return res;
+  };
 
   return google.drive({ version: 'v3', auth });
 };
