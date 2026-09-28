@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 import { getSupabase } from '@/lib/supabase';
 import { Readable } from 'stream';
 
@@ -31,7 +31,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       const buffer = Buffer.from(await file.arrayBuffer());
       const stream = Readable.from(buffer);
 
-      const driveRes = await drive.files.create({
+      const driveRes = await getDrive().files.create({
         requestBody: {
           name: file.name,
           parents: [client.drive_folder_id],
