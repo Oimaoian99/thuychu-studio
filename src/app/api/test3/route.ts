@@ -3,19 +3,18 @@ import { drive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
-    const auth: any = drive.context._options.auth;
-    const token = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
+    const rootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+    if (!rootId) return NextResponse.json({ error: 'No root folder' });
 
-    const response = await fetch(`https://www.googleapis.com/drive/v3/about?fields=storageQuota,user`, {
-      headers: {
-        Authorization: `Bearer ${token.token}`
+    const response = await drive.permissions.create({
+      fileId: rootId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
       }
     });
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: response.headers
-    });
+    return NextResponse.json({ success: true, response: response.data });
   } catch (e: any) {
     return NextResponse.json({ error: e.message });
   }

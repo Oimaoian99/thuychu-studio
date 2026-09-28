@@ -28,7 +28,8 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     const suaFolder = subfoldersRes.data.files?.find(f => f.name?.toUpperCase().includes('SUA'));
 
     const formatImage = (file: any, folderName?: string) => {
-      let url = `/api/drive/thumbnail?id=${file.id}`;
+      // Dùng link trực tiếp của Google, bỏ qua Vercel proxy để tiết kiệm 100% băng thông!
+      let url = file.thumbnailLink ? file.thumbnailLink.replace(/=s\d+/, '=w2048') : `/api/drive/thumbnail?id=${file.id}`;
       return { 
         id: file.id, 
         name: file.name, 

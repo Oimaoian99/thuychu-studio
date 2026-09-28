@@ -76,7 +76,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       
       try {
         setDownloadingId(img.id);
-        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
+        const response = await fetch(img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
         const blob = await response.blob();
         const file = new File([blob], img.name, { type: blob.type || 'image/jpeg' });
         
@@ -86,7 +86,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         console.error("Lỗi tải ảnh:", error);
         // Fallback
         const tempLink = document.createElement('a');
-        tempLink.href = `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
+        tempLink.href = img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
         tempLink.download = img.name;
         tempLink.click();
       } finally {
@@ -294,7 +294,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                   {/* Nút Download */}
                   {img.downloadUrl && (
                     <a
-                      href={`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
+                      href={img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
                       download
                       title="Tải ảnh về máy"
                       onClick={(e) => {
