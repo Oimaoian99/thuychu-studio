@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, use } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -20,7 +20,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [imgError, setImgError] = useState<Record<string, boolean>>({});
   
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [maxSelections, setMaxSelections] = useState(5); // Setup mặc định
+  const [maxSelections, setMaxSelections] = useState(5); // Setup máº·c Ä‘á»‹nh
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -39,14 +39,14 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           setRawImages(rawImgs);
           setEditedImages(editedImgs);
           
-          // Lọc trùng id cho videos lỡ có file nằm ở cả 2 thư mục
+          // Lá»c trÃ¹ng id cho videos lá»¡ cÃ³ file náº±m á»Ÿ cáº£ 2 thÆ° má»¥c
           const allVids = [...rawVids, ...editedVids];
           const uniqueVids = Array.from(new Map(allVids.map(item => [item.id, item])).values());
           setVideos(uniqueVids);
 
           setClientId(json.clientId);
           setSelected(new Set(json.selectedIds));
-          setMaxSelections(json.maxSelections || 5); // Cập nhật giới hạn từ Database
+          setMaxSelections(json.maxSelections || 5); // Cáº­p nháº­t giá»›i háº¡n tá»« Database
           
           if (editedImgs.length > 0) {
             setActiveTab('edited');
@@ -55,7 +55,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
           setError(json.error);
         }
       } catch (err) {
-        setError("Lỗi kết nối");
+        setError("Lá»—i káº¿t ná»‘i");
       }
       setLoading(false);
     };
@@ -80,10 +80,10 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         const blob = await response.blob();
         const file = new File([blob], img.name, { type: blob.type || 'image/jpeg' });
         
-        // Thay vì gọi share ngay (sẽ bị iOS chặn vì timeout), ta lưu file lại và hiển thị nút bấm
+        // Thay vÃ¬ gá»i share ngay (sáº½ bá»‹ iOS cháº·n vÃ¬ timeout), ta lÆ°u file láº¡i vÃ  hiá»ƒn thá»‹ nÃºt báº¥m
         setReadyToShareFile(file);
       } catch (error: any) {
-        console.error("Lỗi tải ảnh:", error);
+        console.error("Lá»—i táº£i áº£nh:", error);
         // Fallback
         const tempLink = document.createElement('a');
         tempLink.href = img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
@@ -104,7 +104,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       } catch (e) {
         console.error(e);
       }
-      setReadyToShareFile(null); // Đóng popup
+      setReadyToShareFile(null); // ÄÃ³ng popup
     }
   };
 
@@ -114,7 +114,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       newSelected.delete(id);
     } else {
       if (newSelected.size >= maxSelections) {
-        alert(`Gói chụp hiện tại chỉ cho phép chọn tối đa ${maxSelections} bức ảnh! Vui lòng bỏ chọn ảnh khác trước khi chọn thêm nhé.`);
+        alert(`GÃ³i chá»¥p hiá»‡n táº¡i chá»‰ cho phÃ©p chá»n tá»‘i Ä‘a ${maxSelections} bá»©c áº£nh! Vui lÃ²ng bá» chá»n áº£nh khÃ¡c trÆ°á»›c khi chá»n thÃªm nhÃ©.`);
         return;
       }
       newSelected.add(id);
@@ -124,7 +124,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
   const handleSave = async () => {
     if (selected.size === 0) {
-      if (!confirm("Bạn chưa chọn bức ảnh nào. Bạn có chắc chắn muốn gửi không?")) return;
+      if (!confirm("Báº¡n chÆ°a chá»n bá»©c áº£nh nÃ o. Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n gá»­i khÃ´ng?")) return;
     }
     setSaving(true);
     const selectedImages = rawImages.filter(img => selected.has(img.id));
@@ -137,12 +137,12 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       });
       const json = await res.json();
       if (json.success) {
-        alert(selected.size === 0 ? "Đã gửi thông báo cho Studio thành công!" : "Đã gửi yêu cầu chỉnh sửa cho Studio thành công!");
+        alert(selected.size === 0 ? "ÄÃ£ gá»­i thÃ´ng bÃ¡o cho Studio thÃ nh cÃ´ng!" : "ÄÃ£ gá»­i yÃªu cáº§u chá»‰nh sá»­a cho Studio thÃ nh cÃ´ng!");
       } else {
-        alert("Lỗi: " + json.error);
+        alert("Lá»—i: " + json.error);
       }
     } catch (err) {
-      alert("Lỗi khi lưu ảnh");
+      alert("Lá»—i khi lÆ°u áº£nh");
     }
     setSaving(false);
   };
@@ -150,24 +150,24 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   if (loading) return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black flex items-center justify-center flex-col gap-4">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-      <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Đang tải thư viện ảnh</p>
+      <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Äang táº£i thÆ° viá»‡n áº£nh</p>
     </div>
   );
-  if (error) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-red-400 font-medium">{error}</div>;
+  if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p><button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button></div>;
 
   const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
 
-  // Xử lý phân nhóm ảnh theo thư mục
+  // Xá»­ lÃ½ phÃ¢n nhÃ³m áº£nh theo thÆ° má»¥c
   const imagesWithIndex = currentImages.map((img, index) => ({ ...img, globalIndex: index }));
   const groupedImages = imagesWithIndex.reduce((acc, img) => {
-    const folder = img.folderName || 'Ảnh ở bên ngoài';
+    const folder = img.folderName || 'áº¢nh á»Ÿ bÃªn ngoÃ i';
     if (!acc[folder]) acc[folder] = [];
     acc[folder].push(img);
     return acc;
   }, {} as Record<string, any[]>);
 
   const folderNames = Object.keys(groupedImages);
-  const showHeaders = folderNames.length > 1 || (folderNames.length === 1 && folderNames[0] !== 'Ảnh ở bên ngoài');
+  const showHeaders = folderNames.length > 1 || (folderNames.length === 1 && folderNames[0] !== 'áº¢nh á»Ÿ bÃªn ngoÃ i');
 
   return (
     <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800 via-zinc-950 to-black pb-32 overflow-x-hidden selection:bg-purple-500/30">
@@ -181,7 +181,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-5">
           <div className="flex justify-between items-center w-full sm:w-auto">
             <div className="flex items-center gap-3">
-              <a href="/" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-all shadow-inner" title="Quay về trang chủ">
+              <a href="/" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-all shadow-inner" title="Quay vá» trang chá»§">
                 <Home size={20} />
               </a>
               <h1 className="text-lg sm:text-xl font-extrabold truncate max-w-[180px] sm:max-w-md text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 font-mono">
@@ -197,13 +197,13 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               onClick={() => setActiveTab('raw')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${activeTab === 'raw' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
-              <ImageIcon size={16} /> Ảnh Gốc <span className="opacity-70 font-normal">({selected.size}/{maxSelections})</span>
+              <ImageIcon size={16} /> áº¢nh Gá»‘c <span className="opacity-70 font-normal">({selected.size}/{maxSelections})</span>
             </button>
             <button 
               onClick={() => setActiveTab('edited')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${activeTab === 'edited' ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30 text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
-              <Sparkles size={16} /> Đã Sửa
+              <Sparkles size={16} /> ÄÃ£ Sá»­a
             </button>
             {videos.length > 0 && (
               <button 
@@ -219,7 +219,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         </div>
       </div>
 
-      {/* Grid Ảnh */}
+      {/* Grid áº¢nh */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 mt-2 relative z-10">
         {currentImages.length === 0 ? (
           <div className="text-center text-zinc-500 mt-32 flex flex-col items-center gap-6">
@@ -227,7 +227,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               {activeTab === 'edited' ? <Sparkles size={40} className="text-purple-400 opacity-50" /> : activeTab === 'video' ? <Film size={40} className="text-zinc-600" /> : <ImageIcon size={40} className="text-zinc-600" />}
             </div>
             <p className="text-lg font-medium text-zinc-400">
-              {activeTab === 'edited' ? "Nhiếp ảnh gia đang xử lý ảnh của bạn. Trở lại sau nhé!" : activeTab === 'video' ? "Chưa có video nào trong thư mục này." : "Chưa có ảnh nào trong thư mục này."}
+              {activeTab === 'edited' ? "Nhiáº¿p áº£nh gia Ä‘ang xá»­ lÃ½ áº£nh cá»§a báº¡n. Trá»Ÿ láº¡i sau nhÃ©!" : activeTab === 'video' ? "ChÆ°a cÃ³ video nÃ o trong thÆ° má»¥c nÃ y." : "ChÆ°a cÃ³ áº£nh nÃ o trong thÆ° má»¥c nÃ y."}
             </p>
           </div>
         ) : (
@@ -281,7 +281,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                     </div>
                   )}
                   
-                  {/* Checkbox siêu đẹp */}
+                  {/* Checkbox siÃªu Ä‘áº¹p */}
                   {activeTab === 'raw' && !isVideo && (
                     <div 
                       onClick={() => toggleSelect(img.id)}
@@ -291,12 +291,12 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                     </div>
                   )}
 
-                  {/* Nút Download */}
+                  {/* NÃºt Download */}
                   {img.downloadUrl && (
                     <a
                       href={img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`}
                       download
-                      title="Tải ảnh về máy"
+                      title="Táº£i áº£nh vá» mÃ¡y"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDownloadClick(e, img);
@@ -320,7 +320,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         )}
       </div>
 
-      {/* Lightbox - Xem ảnh Full */}
+      {/* Lightbox - Xem áº£nh Full */}
       {previewIndex !== null && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
@@ -375,19 +375,19 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                 className={`absolute bottom-10 px-10 py-4 rounded-full text-lg font-bold shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-3 border ${selected.has(currentImages[previewIndex].id) ? 'bg-gradient-to-r from-purple-600 to-blue-600 border-transparent text-white shadow-purple-500/40' : 'bg-black/50 backdrop-blur-xl border-white/20 text-white hover:bg-black/70'}`}
               >
                 <Check size={24} strokeWidth={selected.has(currentImages[previewIndex].id) ? 3 : 2} /> 
-                {selected.has(currentImages[previewIndex].id) ? 'ĐÃ CHỌN ẢNH NÀY' : 'CHỌN ẢNH NÀY'}
+                {selected.has(currentImages[previewIndex].id) ? 'ÄÃƒ CHá»ŒN áº¢NH NÃ€Y' : 'CHá»ŒN áº¢NH NÃ€Y'}
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Nút Gửi Studio Floating Island */}
+      {/* NÃºt Gá»­i Studio Floating Island */}
       {activeTab === 'raw' && (
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
           <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
             <p className="font-medium text-sm sm:text-base text-zinc-300">
-              Đã chọn <span className="text-white font-black text-xl px-1">{selected.size}/{maxSelections}</span>
+              ÄÃ£ chá»n <span className="text-white font-black text-xl px-1">{selected.size}/{maxSelections}</span>
             </p>
             <button 
               onClick={handleSave}
@@ -397,14 +397,14 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               {saving ? (
                 <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
               ) : (
-                <><Send size={18} /> Gửi Studio</>
+                <><Send size={18} /> Gá»­i Studio</>
               )}
             </button>
           </div>
         </div>
       )}
 
-      {/* Modal báo ảnh đã sẵn sàng lưu cho iOS */}
+      {/* Modal bÃ¡o áº£nh Ä‘Ã£ sáºµn sÃ ng lÆ°u cho iOS */}
       {readyToShareFile && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
           <div className="bg-zinc-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl relative">
@@ -417,15 +417,15 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-green-400">
               <Download size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Đã sẵn sàng lưu!</h3>
+            <h3 className="text-xl font-bold text-white mb-3">ÄÃ£ sáºµn sÃ ng lÆ°u!</h3>
             <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-              Ảnh gốc đã được tải về bộ nhớ tạm. Bấm nút dưới đây và chọn <strong className="text-white">Lưu hình ảnh (Save Image)</strong> để lưu thẳng vào Thư viện ảnh của bạn nhé.
+              áº¢nh gá»‘c Ä‘Ã£ Ä‘Æ°á»£c táº£i vá» bá»™ nhá»› táº¡m. Báº¥m nÃºt dÆ°á»›i Ä‘Ã¢y vÃ  chá»n <strong className="text-white">LÆ°u hÃ¬nh áº£nh (Save Image)</strong> Ä‘á»ƒ lÆ°u tháº³ng vÃ o ThÆ° viá»‡n áº£nh cá»§a báº¡n nhÃ©.
             </p>
             <button 
               onClick={executeShare}
               className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2"
             >
-              <Download size={20} /> Mở bảng Lưu ảnh
+              <Download size={20} /> Má»Ÿ báº£ng LÆ°u áº£nh
             </button>
           </div>
         </div>
@@ -434,3 +434,5 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     </main>
   );
 }
+
+
