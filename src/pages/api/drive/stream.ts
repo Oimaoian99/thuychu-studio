@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export const config = {
   api: {
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Lấy luồng dữ liệu file từ Google Drive
-    const response = await drive.files.get(
+    const response = await getDrive().files.get(
       { fileId: id, alt: 'media' },
       { 
         responseType: 'stream',

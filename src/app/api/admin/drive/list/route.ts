@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       }
 
       // 1. Tìm thư mục con (GOC hoặc SUA)
-      const folderRes = await drive.files.list({
+      const folderRes = await getDrive().files.list({
         q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`,
         fields: 'files(id)',
       });
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     }
 
     // 2. Lấy danh sách file trong thư mục đó
-    const filesRes = await drive.files.list({
+    const filesRes = await getDrive().files.list({
       q: `'${targetFolderId}' in parents and trashed = false`,
       fields: 'files(id, name, mimeType)',
       pageSize: 1000,

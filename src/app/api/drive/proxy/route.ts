@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing file id' }, { status: 400 });
     }
 
-    const auth: any = drive.context._options.auth;
+    const auth: any = getDrive().context._options.auth;
     const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
     const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 

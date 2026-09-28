@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     if (!targetFolderId) {
       // 1. Tìm thư mục con (GOC hoặc SUA) bên trong parentId
-      const folderRes = await drive.files.list({
+      const folderRes = await getDrive().files.list({
         q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${type}' and trashed = false`,
         fields: 'files(id)',
       });

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     // Tìm thư mục con GOC hoặc SUA trong thư mục của khách hàng
-    const subfoldersRes = await drive.files.list({
+    const subfoldersRes = await getDrive().files.list({
       q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name contains '${type}' and trashed = false`,
       fields: 'files(id, name)',
     });
@@ -20,10 +20,10 @@ export async function GET(req: Request) {
     const targetFolder = subfoldersRes.data.files?.[0];
     
     if (targetFolder) {
-      return NextResponse.redirect(`https://drive.google.com/drive/folders/${targetFolder.id}`);
+      return NextResponse.redirect(`https://getDrive().google.com/drive/folders/${targetFolder.id}`);
     } else {
       // Nếu không tìm thấy (lỡ bị xóa), mở thư mục gốc
-      return NextResponse.redirect(`https://drive.google.com/drive/folders/${folderId}`);
+      return NextResponse.redirect(`https://getDrive().google.com/drive/folders/${folderId}`);
     }
   } catch (error: any) {
     console.error(error);

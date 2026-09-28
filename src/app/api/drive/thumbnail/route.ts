@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
+import { getDrive } from '@/lib/drive';
 
 export async function GET(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     // Lấy thông tin file bao gồm thumbnailLink
-    const fileRes = await drive.files.get({ fileId: id, fields: 'thumbnailLink' });
+    const fileRes = await getDrive().files.get({ fileId: id, fields: 'thumbnailLink' });
     const thumbnailUrl = fileRes.data.thumbnailLink?.replace(/=s\d+/, `=w${w}`);
 
     if (!thumbnailUrl) {
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     }
 
     // Fetch the thumbnail using the server
-    const auth: any = drive.context._options.auth;
+    const auth: any = getDrive().context._options.auth;
     const tokenResponse = auth.getClient ? await (await auth.getClient()).getAccessToken() : await auth.getAccessToken();
     const token = typeof tokenResponse === 'string' ? tokenResponse : (tokenResponse.token || tokenResponse.access_token);
 
