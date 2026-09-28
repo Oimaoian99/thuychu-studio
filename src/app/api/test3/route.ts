@@ -1,21 +1,9 @@
 import { NextResponse } from 'next/server';
-import { drive } from '@/lib/drive';
-
+export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
-  try {
-    const rootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-    if (!rootId) return NextResponse.json({ error: 'No root folder' });
-
-    const response = await drive.permissions.create({
-      fileId: rootId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      }
-    });
-
-    return NextResponse.json({ success: true, response: response.data });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message });
-  }
+  return NextResponse.json({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'exists' : 'missing',
+    allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+  });
 }
