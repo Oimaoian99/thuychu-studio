@@ -27,7 +27,8 @@ export async function GET(req: Request) {
       }
     }
 
-    const files = await driveListFiles(`'${targetFolderId}' in parents and trashed = false`, 'files(id, name, mimeType)');
+    // Get thumbnailLink and webContentLink so we can bypass proxying!
+    const files = await driveListFiles(`'${targetFolderId}' in parents and trashed = false`, 'files(id, name, mimeType, thumbnailLink, webContentLink)');
     
     // Sort files by name naturally
     files.sort((a: any, b: any) => {
