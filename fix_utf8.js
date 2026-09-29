@@ -1,13 +1,13 @@
 ﻿const fs = require('fs');
-let content = fs.readFileSync('src/app/gallery/[code]/page.tsx', 'utf8');
+let content = fs.readFileSync('src/components/AdminUploader.tsx', 'utf8');
 
-const target = 'if (error) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-red-400 font-medium">{error}</div>;';
-const replacement = 'if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p><button onClick={() => window.location.href = \'/\'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button></div>;';
+const regex1 = /src=\{\\/api\/drive\/thumbnail\?id=\\$\\{file\.id\\}\\}/;
+const regex2 = /src=\{\\/api\/drive\/proxy\?id=\\$\\{existingFiles\\[previewIndex\\]\.id\\}&action=view\\}/;
 
-if(content.includes(target)) {
-    content = content.replace(target, replacement);
-    fs.writeFileSync('src/app/gallery/[code]/page.tsx', content, 'utf8');
-    console.log('Successfully added Back to Home button with correct UTF-8.');
-} else {
-    console.log('Target string not found in page.tsx');
-}
+console.log("Regex 1 match:", regex1.test(content));
+console.log("Regex 2 match:", regex2.test(content));
+
+content = content.replace(regex1, 'src={file.thumbnailLink ? file.thumbnailLink.replace(/=s\\\\d+/, "=w600") : /api/drive/thumbnail?id=\\}');
+content = content.replace(regex2, 'src={existingFiles[previewIndex].thumbnailLink ? existingFiles[previewIndex].thumbnailLink.replace(/=s\\\\d+/, "=w2048") : /api/drive/proxy?id=\\&action=view}');
+
+fs.writeFileSync('src/components/AdminUploader.tsx', content, 'utf8');
