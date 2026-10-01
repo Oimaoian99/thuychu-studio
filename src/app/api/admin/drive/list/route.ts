@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { driveListFiles } from '@/lib/drive';
 
@@ -44,3 +43,6 @@ export async function GET(req: Request) {
   }
 }
 
+
+
+export const dynamic = 'force-dynamic';

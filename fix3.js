@@ -6,7 +6,7 @@ const files = [
 ];
 for (const file of files) {
   let content = fs.readFileSync(file, 'utf8');
-  content = content.replace(/^export const dynamic = 'force-dynamic';[\r\n]+/, '');
+  content = content.replace(/export const dynamic = 'force-dynamic';[\r\n]*/g, '');
   content = content + "\nexport const dynamic = 'force-dynamic';\n";
   fs.writeFileSync(file, content, 'utf8');
 }

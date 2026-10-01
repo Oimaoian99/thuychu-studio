@@ -1,5 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -19,3 +18,6 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   }
 }
 
+
+
+export const dynamic = 'force-dynamic';
