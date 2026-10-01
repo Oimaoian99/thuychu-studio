@@ -43,8 +43,8 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     setLoadingFiles(true);
     try {
       const url = exactFolderId 
-        ? `/api/admin/drive/list?exactFolderId=${exactFolderId}`
-        : `/api/admin/drive/list?parentId=${folderId}&type=${type}`;
+        ? `/api/admin/drive/list?exactFolderId=${exactFolderId}&t=${Date.now()}`
+        : `/api/admin/drive/list?parentId=${folderId}&type=${type}&t=${Date.now()}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success) {

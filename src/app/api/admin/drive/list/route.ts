@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
 import { driveListFiles } from '@/lib/drive';
 
 export async function GET(req: Request) {
@@ -35,8 +36,11 @@ export async function GET(req: Request) {
       return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     });
 
-    return NextResponse.json({ success: true, files, folderId: targetFolderId });
+    const response = NextResponse.json({ success: true, files, folderId: targetFolderId });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

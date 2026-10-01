@@ -1,4 +1,5 @@
 ﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { driveListFiles } from '@/lib/drive';
 import { getSupabase } from '@/lib/supabase';
@@ -15,7 +16,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       .single();
 
     if (error || !client) {
-      return NextResponse.json({ error: 'Mã khách hàng không tồn tại' }, { status: 404 });
+      return NextResponse.json({ error: 'MÃ£ khÃ¡ch hÃ ng khÃ´ng tá»“n táº¡i' }, { status: 404 });
     }
 
     const subfolders = await driveListFiles(`'${client.drive_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, 'files(id, name)');
@@ -74,7 +75,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
 
     const selectedIds = selectedImages?.map(img => img.image_drive_id) || [];
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       rawFiles, 
       editedFiles, 
@@ -82,6 +83,8 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       selectedIds,
       maxSelections: client.max_selections || 5
     });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response;
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -94,7 +97,7 @@ export async function POST(req: Request, context: { params: Promise<{ code: stri
     const { clientId, selectedImages } = await req.json();
 
     if (!clientId || !selectedImages) {
-      return NextResponse.json({ error: 'Dữ liệu không hợp lệ' }, { status: 400 });
+      return NextResponse.json({ error: 'Dá»¯ liá»‡u khÃ´ng há»£p lá»‡' }, { status: 400 });
     }
 
     await getSupabase().from('selected_images').delete().eq('client_id', clientId);
@@ -110,9 +113,12 @@ export async function POST(req: Request, context: { params: Promise<{ code: stri
       if (error) throw error;
     }
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 
