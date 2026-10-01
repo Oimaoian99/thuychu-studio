@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 
@@ -17,3 +18,4 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

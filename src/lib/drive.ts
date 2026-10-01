@@ -1,4 +1,4 @@
-﻿import { google } from 'googleapis';
+import { google } from 'googleapis';
 
 export const getAccessToken = async () => {
   if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -43,7 +43,7 @@ export const driveCreateFolder = async (name: string, parents: string[]) => {
 export const driveListFiles = async (query: string, fields: string = 'files(id, name, mimeType, webContentLink, thumbnailLink)') => {
   const token = await getAccessToken();
   const url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(query) + '&fields=' + encodeURIComponent(fields) + '&pageSize=1000';
-  const res = await fetch(url, { headers: { 'Authorization': "Bearer " + token } });
+  const res = await fetch(url, { headers: { 'Authorization': "Bearer " + token }, cache: 'no-store' });
   const data = await res.json();
   return data.files || [];
 };

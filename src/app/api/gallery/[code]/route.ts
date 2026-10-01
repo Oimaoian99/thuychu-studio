@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server';
+﻿export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
 import { driveListFiles } from '@/lib/drive';
 import { getSupabase } from '@/lib/supabase';
 
@@ -114,3 +115,4 @@ export async function POST(req: Request, context: { params: Promise<{ code: stri
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
