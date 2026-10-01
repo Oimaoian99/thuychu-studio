@@ -18,7 +18,7 @@ export const getAccessToken = async () => {
   } else {
     // Service account fallback
     const credentials = {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, ''),
       private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/^"|"$/g, '').replace(/\\n/g, '\n'),
     };
     const auth = new google.auth.GoogleAuth({
@@ -58,7 +58,7 @@ export const getDrive = async () => {
     auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim() });
   } else {
     const credentials = {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, ''),
       private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/^"|"$/g, '').replace(/\\n/g, '\n'),
     };
     auth = new google.auth.GoogleAuth({ credentials, scopes: ['https://www.googleapis.com/auth/drive'] });
