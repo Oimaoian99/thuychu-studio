@@ -45,6 +45,7 @@ export const driveListFiles = async (query: string, fields: string = 'files(id, 
   const url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(query) + '&fields=' + encodeURIComponent(fields) + '&pageSize=1000&t=' + Date.now();
   const res = await fetch(url, { headers: { 'Authorization': "Bearer " + token }, cache: 'no-store' });
   const data = await res.json();
+  if (data.error) throw new Error(JSON.stringify(data.error));
   return data.files || [];
 };
 
