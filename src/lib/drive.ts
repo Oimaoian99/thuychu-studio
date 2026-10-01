@@ -13,6 +13,7 @@ export const getAccessToken = async () => {
       }).toString()
     });
     const data = await res.json();
+    if (!data.access_token) throw new Error("Token fetch failed: " + JSON.stringify(data));
     return data.access_token;
   } else {
     // Service account fallback
