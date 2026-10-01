@@ -1,4 +1,60 @@
-import { google } from 'googleapis';
+﻿import { google } from 'googleapis';
+
+function base64url(source: Buffer | Uint8Array) {
+  let encoded = Buffer.from(source).toString('base64');
+  return encoded.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+async function getServiceAccountToken(clientEmail: string, privateKey: string) {
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: clientEmail,
+    scope: 'https://www.googleapis.com/auth/drive',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  };
+  
+  const signatureInput = base64url(Buffer.from(JSON.stringify(header))) + '.' + base64url(Buffer.from(JSON.stringify(claim)));
+  
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
+  let pem = privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '');
+  if (!pem.includes(pemHeader)) throw new Error('Invalid private key format');
+  
+  const pemContents = pem.substring(pem.indexOf(pemHeader) + pemHeader.length, pem.indexOf(pemFooter)).replace(/\s/g, '');
+  const binaryDer = Buffer.from(pemContents, 'base64');
+  
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(signatureInput)
+  );
+  
+  const jwt = signatureInput + '.' + base64url(new Uint8Array(signature));
+  
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    }).toString()
+  });
+  
+  const data = await res.json();
+  if (data.error) throw new Error('Token fetch failed: ' + JSON.stringify(data));
+  return data.access_token;
+}
 
 export const getAccessToken = async () => {
   if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -16,17 +72,11 @@ export const getAccessToken = async () => {
     if (!data.access_token) throw new Error("Token fetch failed: " + JSON.stringify(data));
     return data.access_token;
   } else {
-    // Service account fallback
-    const credentials = {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, ''),
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/^"|"$/g, '').replace(/\\n/g, '\n'),
-    };
-    const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-    const token = await auth.getAccessToken();
-    return token;
+    // Service account fallback using Cloudflare compatible crypto.subtle
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, '');
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    if (!clientEmail || !privateKey) throw new Error('Missing Service Account Credentials');
+    return await getServiceAccountToken(clientEmail, privateKey);
   }
 };
 
@@ -50,7 +100,6 @@ export const driveListFiles = async (query: string, fields: string = 'files(id, 
   return data.files || [];
 };
 
-// Vẫn giữ lại getDrive cho các route không bị lỗi (như upload chunk)
 export const getDrive = async () => {
   let auth: any;
   if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
