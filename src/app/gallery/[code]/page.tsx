@@ -78,7 +78,19 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         setDownloadingId(img.id);
         const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
         const blob = await response.blob();
-        const file = new File([blob], img.name, { type: blob.type || 'image/jpeg' });
+        let fileName = img.name;
+        let mimeType = img.mimeType || blob.type;
+        if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
+        
+        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|heic|gif)$/)) {
+          let ext = '.jpg';
+          if (mimeType === 'image/png') ext = '.png';
+          else if (mimeType === 'image/heic') ext = '.heic';
+          else if (mimeType === 'image/gif') ext = '.gif';
+          fileName += ext;
+        }
+        
+        const file = new File([blob], fileName, { type: mimeType });
         
         // Thay vì gọi share ngay (sẽ bị iOS chặn vì timeout), ta lưu file lại và hiển thị nút bấm
         setReadyToShareFile(file);
