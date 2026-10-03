@@ -130,6 +130,23 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     }
   };
 
+  
+  const fetchWithRetry = async (url: string, options: any, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await fetch(url, options);
+        if (res.status === 429 || res.status >= 500) {
+          throw new Error('Server error: ' + res.status);
+        }
+        return res;
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+    throw new Error('Failed to fetch after retries');
+  };
+
   const startUpload = async (uploadItem: UploadingFile) => {
     updateFileStatus(uploadItem.id, 'uploading', 0);
     
@@ -147,7 +164,7 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         body.type = type;
       }
 
-      const sessionRes = await fetch('/api/admin/upload-session', {
+      const sessionRes = await fetchWithRetry('/api/admin/upload-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -168,7 +185,7 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         const chunk = file.slice(offset, end);
         const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
         
-        const chunkRes = await fetch('/api/admin/upload-chunk', {
+        const chunkRes = await fetchWithRetry('/api/admin/upload-chunk', {
           method: 'POST',
           headers: {
             'x-upload-id': sessionData.uploadId || '',

@@ -56,28 +56,58 @@ async function getServiceAccountToken(clientEmail: string, privateKey: string) {
   return data.access_token;
 }
 
+let cachedAccessToken: string | null = null;
+let tokenExpiryTime: number = 0;
+let isFetchingToken = false;
+let tokenPromise: Promise<string> | null = null;
+
 export const getAccessToken = async () => {
-  if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID.trim(),
-        client_secret: process.env.GOOGLE_CLIENT_SECRET.trim(),
-        refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim(),
-        grant_type: 'refresh_token'
-      }).toString()
-    });
-    const data = await res.json();
-    if (!data.access_token) throw new Error("Token fetch failed: " + JSON.stringify(data));
-    return data.access_token;
-  } else {
-    // Service account fallback using Cloudflare compatible crypto.subtle
-    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, '');
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
-    if (!clientEmail || !privateKey) throw new Error('Missing Service Account Credentials');
-    return await getServiceAccountToken(clientEmail, privateKey);
+  // N?u c token trong b? nh? v cn h?n (cho b?a hao 5 pht) th dng lun
+  if (cachedAccessToken && Date.now() < tokenExpiryTime - 5 * 60 * 1000) {
+    return cachedAccessToken;
   }
+  
+  // N?u dang trong qu trnh l?y token th ch? request do d? trnh l?y thm
+  if (isFetchingToken && tokenPromise) {
+    return await tokenPromise;
+  }
+
+  isFetchingToken = true;
+  tokenPromise = (async () => {
+    try {
+      let newToken = '';
+      if (process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+        const res = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID.trim(),
+            client_secret: process.env.GOOGLE_CLIENT_SECRET.trim(),
+            refresh_token: process.env.GOOGLE_REFRESH_TOKEN.trim(),
+            grant_type: 'refresh_token'
+          }).toString()
+        });
+        const data = await res.json();
+        if (!data.access_token) throw new Error("Token fetch failed: " + JSON.stringify(data));
+        newToken = data.access_token;
+      } else {
+        // Service account fallback using Cloudflare compatible crypto.subtle
+        const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.replace(/^"|"$/g, '');
+        const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+        if (!clientEmail || !privateKey) throw new Error('Missing Service Account Credentials');
+        newToken = await getServiceAccountToken(clientEmail, privateKey);
+      }
+      
+      cachedAccessToken = newToken;
+      tokenExpiryTime = Date.now() + 3600 * 1000; // 1 ti?ng
+      return newToken;
+    } finally {
+      isFetchingToken = false;
+      tokenPromise = null;
+    }
+  })();
+  
+  return await tokenPromise;
 };
 
 export const driveCreateFolder = async (name: string, parents: string[]) => {
