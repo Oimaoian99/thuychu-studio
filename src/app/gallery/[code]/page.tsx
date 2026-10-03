@@ -118,18 +118,26 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         let blob = await response.blob();
         blob = await overwriteExifDateToNow(blob);
         let fileName = img.name;
-        let mimeType = img.mimeType || blob.type;
-        if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
-        
-        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|heic|gif)$/)) {
-          let ext = '.jpg';
-          if (mimeType === 'image/png') ext = '.png';
-          else if (mimeType === 'image/heic') ext = '.heic';
-          else if (mimeType === 'image/gif') ext = '.gif';
-          fileName += ext;
-        }
-        
-        const file = new File([blob], fileName, { type: mimeType });
+          let mimeType = img.mimeType || blob.type;
+          
+          const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
+          
+          if (!hasExtension) {
+             if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
+             let ext = '.jpg';
+             if (mimeType === 'image/png') ext = '.png';
+             else if (mimeType === 'image/heic') ext = '.heic';
+             else if (mimeType === 'image/gif') ext = '.gif';
+             fileName += ext;
+          } else if (mimeType === 'application/octet-stream') {
+             const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+             if (ext === '.png') mimeType = 'image/png';
+             else if (ext === '.heic') mimeType = 'image/heic';
+             else if (ext === '.gif') mimeType = 'image/gif';
+             else mimeType = 'image/jpeg';
+          }
+          
+          const file = new File([blob], fileName, { type: mimeType });
         
         // Thay vì gọi share ngay (sẽ bị iOS chặn vì timeout), ta lưu file lại và hiển thị nút bấm
         setReadyToShareFile(file);
