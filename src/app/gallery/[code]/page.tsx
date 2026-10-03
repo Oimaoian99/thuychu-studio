@@ -5,6 +5,44 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Check, Download, Image as ImageIcon, Sparkles, X, ChevronLeft, ChevronRight, Home, Send, Film, PlayCircle, RotateCw, Folder } from "lucide-react";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
+
+async function overwriteExifDateToNow(blob: Blob): Promise<Blob> {
+  try {
+    const buffer = await blob.arrayBuffer();
+    const view = new Uint8Array(buffer);
+    
+    if (view[0] !== 0xFF || view[1] !== 0xD8) return blob;
+    
+    const scanLimit = Math.min(view.length, 131072); // scan up to 128KB
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const dateBytes = new TextEncoder().encode(dateStr);
+    
+    for (let i = 0; i < scanLimit - 19; i++) {
+      if (
+        view[i+4] === 58 && view[i+7] === 58 && view[i+10] === 32 && 
+        view[i+13] === 58 && view[i+16] === 58
+      ) {
+        let isDate = true;
+        for (let j = 0; j < 19; j++) {
+          if (j === 4 || j === 7 || j === 10 || j === 13 || j === 16) continue;
+          if (view[i+j] < 48 || view[i+j] > 57) {
+            isDate = false;
+            break;
+          }
+        }
+        if (isDate) {
+          view.set(dateBytes, i);
+        }
+      }
+    }
+    return new Blob([view], { type: blob.type });
+  } catch (e) {
+    return blob;
+  }
+}
+
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const [rawImages, setRawImages] = useState<any[]>([]);
@@ -77,7 +115,8 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       try {
         setDownloadingId(img.id);
         const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
-        const blob = await response.blob();
+        let blob = await response.blob();
+        blob = await overwriteExifDateToNow(blob);
         let fileName = img.name;
         let mimeType = img.mimeType || blob.type;
         if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
