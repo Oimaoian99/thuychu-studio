@@ -103,12 +103,19 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
 
 
+  
+  const [isBatchDownloadMode, setIsBatchDownloadMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
+  const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
+  const [readyToShareFiles, setReadyToShareFiles] = useState<File[] | null>(null);
+
   const [readyToShareFile, setReadyToShareFile] = useState<File | null>(null);
 
   const handleDownloadClick = async (e: any, img: any) => {
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     
+    if (downloadingId) { alert('Đang tải một ảnh khác, vui lòng chờ...'); return; }
     if (isIOS && typeof navigator.share === 'function') {
       e.preventDefault();
       
@@ -152,6 +159,97 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         setDownloadingId(null);
       }
     }
+  };
+
+  
+  const handleBatchDownload = async () => {
+    if (batchSelected.size === 0) return;
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    
+    setBatchProgress({ current: 0, total: batchSelected.size });
+    const filesArray: File[] = [];
+    
+    // Gom tat ca anh
+    const allImages = [...rawImages, ...editedImages];
+    const selectedList = allImages.filter(img => batchSelected.has(img.id));
+    
+    for (let i = 0; i < selectedList.length; i++) {
+      const img = selectedList[i];
+      try {
+        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
+        let blob = await response.blob();
+        blob = await overwriteExifDateToNow(blob);
+        
+        let fileName = img.name;
+        let mimeType = img.mimeType || blob.type;
+        const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
+        
+        if (!hasExtension) {
+           if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
+           let ext = '.jpg';
+           if (mimeType === 'image/png') ext = '.png';
+           else if (mimeType === 'image/heic') ext = '.heic';
+           else if (mimeType === 'image/gif') ext = '.gif';
+           fileName += ext;
+        } else if (mimeType === 'application/octet-stream') {
+           const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+           if (ext === '.png') mimeType = 'image/png';
+           else if (ext === '.heic') mimeType = 'image/heic';
+           else if (ext === '.gif') mimeType = 'image/gif';
+           else mimeType = 'image/jpeg';
+        }
+        
+        const file = new File([blob], fileName, { type: mimeType });
+        filesArray.push(file);
+      } catch (error) {
+        console.error("Loi tai anh " + img.name, error);
+      }
+      setBatchProgress({ current: i + 1, total: batchSelected.size });
+    }
+    
+    if (isIOS && typeof navigator.share === 'function') {
+      setReadyToShareFiles(filesArray);
+    } else {
+      // Fallback for non-iOS or browsers that don't support sharing multiple files
+      // We trigger sequential downloads
+      for (const file of filesArray) {
+        const tempLink = document.createElement('a');
+        tempLink.href = URL.createObjectURL(file);
+        tempLink.download = file.name;
+        tempLink.click();
+        await new Promise(r => setTimeout(r, 500)); // wait 500ms between downloads
+      }
+      setBatchProgress(null);
+      setIsBatchDownloadMode(false);
+      setBatchSelected(new Set());
+    }
+  };
+
+  const executeBatchShare = async () => {
+    if (readyToShareFiles && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          files: readyToShareFiles
+        });
+      } catch (e) {
+        console.error(e);
+      }
+      setReadyToShareFiles(null);
+      setBatchProgress(null);
+      setIsBatchDownloadMode(false);
+      setBatchSelected(new Set());
+    }
+  };
+  
+  const toggleBatchSelect = (id: string) => {
+    const newSelected = new Set(batchSelected);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setBatchSelected(newSelected);
   };
 
   const executeShare = async () => {
@@ -212,7 +310,23 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Đang tải thư viện ảnh</p>
     </div>
   );
-  if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p><button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button></div>;
+  if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setIsBatchDownloadMode(!isBatchDownloadMode);
+                setBatchSelected(new Set());
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${isBatchDownloadMode ? 'bg-purple-600 text-white' : 'bg-white/10 text-zinc-300 hover:bg-white/20'}`}
+            >
+              {isBatchDownloadMode ? 'Hủy chọn nhiều' : 'Chọn tải nhiều'}
+            </button>
+            <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-zinc-300 rounded-full font-bold text-sm hover:bg-white/20 transition-all">
+              <Home size={18} />
+              <span className="hidden sm:inline">Trang ch?</span>
+            </button>
+          </div>
+</div>;
 
   const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
 
@@ -340,10 +454,22 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                     </div>
                   )}
                   
-                  {/* Checkbox siêu đẹp */}
-                  {activeTab === 'raw' && !isVideo && (
+                  
+                  {/* Checkbox for Batch Download */}
+                  {isBatchDownloadMode && !isVideo && (
+                    <div 
+                      onClick={() => toggleBatchSelect(img.id)}
+                      className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${batchSelected.has(img.id) ? 'bg-gradient-to-tr from-green-500 to-emerald-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
+                    >
+                      <Check size={20} strokeWidth={batchSelected.has(img.id) ? 3 : 2} />
+                    </div>
+                  )}
+
+                  {/* Original Checkbox for Studio Selection */}
+                  {!isBatchDownloadMode && activeTab === 'raw' && !isVideo && (
                     <div 
                       onClick={() => toggleSelect(img.id)}
+
                       className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${isSelected ? 'bg-gradient-to-tr from-purple-500 to-blue-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
                     >
                       <Check size={20} strokeWidth={isSelected ? 3 : 2} />
@@ -441,7 +567,33 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         </div>
       )}
 
-      {/* Nút Gửi Studio Floating Island */}
+      
+        {/* Nút Tải nhiều Batch Download Floating Bar */}
+        {isBatchDownloadMode && (
+          <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
+            <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
+              <p className="font-medium text-sm sm:text-base text-zinc-300">
+                Đã chọn <span className="text-white font-black text-xl px-1">{batchSelected.size}</span>
+              </p>
+              <button 
+                onClick={handleBatchDownload}
+                disabled={batchProgress !== null || batchSelected.size === 0}
+                className="bg-green-500 text-white px-6 sm:px-8 py-3 rounded-full text-sm sm:text-base font-bold hover:bg-green-600 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 shadow-xl flex items-center gap-2"
+              >
+                {batchProgress ? (
+                  <>
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    {batchProgress.current} / {batchProgress.total}
+                  </>
+                ) : (
+                  <><Download size={18} /> Tải xuống</>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Nút Gửi Studio Floating Island */}
       {activeTab === 'raw' && (
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
           <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
