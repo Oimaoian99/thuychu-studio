@@ -311,21 +311,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     </div>
   );
   if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setIsBatchDownloadMode(!isBatchDownloadMode);
-                setBatchSelected(new Set());
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${isBatchDownloadMode ? 'bg-purple-600 text-white' : 'bg-white/10 text-zinc-300 hover:bg-white/20'}`}
-            >
-              {isBatchDownloadMode ? 'Hủy chọn nhiều' : 'Chọn tải nhiều'}
-            </button>
-            <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-zinc-300 rounded-full font-bold text-sm hover:bg-white/20 transition-all">
-              <Home size={18} />
-              <span className="hidden sm:inline">Trang ch?</span>
-            </button>
-          </div>
+          <button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button>
 </div>;
 
   const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
@@ -360,6 +346,12 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               <h1 className="text-lg sm:text-xl font-extrabold truncate max-w-[180px] sm:max-w-md text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 font-mono">
                 {decodeURIComponent(code)}
               </h1>
+              <button 
+                onClick={() => { setIsBatchDownloadMode(!isBatchDownloadMode); setBatchSelected(new Set()); }}
+                className={`ml-2 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all ${isBatchDownloadMode ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              >
+                {isBatchDownloadMode ? 'Hủy tải nhiều' : 'Tải nhiều'}
+              </button>
             </div>
             <div className="sm:hidden"><ThemeToggle /></div>
           </div>
