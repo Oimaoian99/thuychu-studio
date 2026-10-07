@@ -181,15 +181,44 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     for (let i = 0; i < selectedList.length; i++) {
       const img = selectedList[i];
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        let blob;
+        let attempts = 0;
+        let success = false;
         
-        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        while (attempts < 3 && !success) {
+          attempts++;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          
+          try {
+            const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error("Fetch failed");
+            
+            const contentLength = response.headers.get('content-length');
+            const expectedSize = contentLength ? parseInt(contentLength, 10) : 0;
+            
+            blob = await response.blob();
+            
+            if (expectedSize > 0 && blob.size < expectedSize) {
+              if (attempts < 3) {
+                console.warn(`Image ${img.name} truncated (${blob.size}/${expectedSize}), retrying...`);
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
+              } else {
+                throw new Error("Truncated after 3 attempts");
+              }
+            }
+            success = true;
+          } catch (e) {
+            clearTimeout(timeoutId);
+            if (attempts >= 3) throw e;
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
         
-        if (!response.ok) throw new Error("Fetch failed");
-        
-        let blob = await response.blob();
+        if (!blob) throw new Error("Failed to get blob");
         blob = await overwriteExifDateToNow(blob);
         
         let fileName = img.name;
@@ -559,7 +588,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               />
             )}
             
-            {activeTab === 'raw' && (
+            {activeTab === 'raw' && !isBatchDownloadMode && (
               <button 
                 onClick={() => toggleSelect(currentImages[previewIndex].id)}
                 className={`absolute bottom-10 px-10 py-4 rounded-full text-lg font-bold shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-3 border ${selected.has(currentImages[previewIndex].id) ? 'bg-gradient-to-r from-purple-600 to-blue-600 border-transparent text-white shadow-purple-500/40' : 'bg-black/50 backdrop-blur-xl border-white/20 text-white hover:bg-black/70'}`}
@@ -599,7 +628,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         )}
 
         {/* Nút Gửi Studio Floating Island */}
-      {activeTab === 'raw' && (
+      {activeTab === 'raw' && !isBatchDownloadMode && (
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
           <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
             <p className="font-medium text-sm sm:text-base text-zinc-300">
