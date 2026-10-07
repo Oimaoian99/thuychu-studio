@@ -188,7 +188,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         while (attempts < 3 && !success) {
           attempts++;
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          const timeoutId = setTimeout(() => controller.abort(), 90000);
           
           try {
             const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
@@ -196,7 +196,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             
             if (!response.ok) throw new Error("Fetch failed");
             
-            const contentLength = response.headers.get('content-length');
+            const contentLength = response.headers.get('x-expected-size') || response.headers.get('content-length');
             const expectedSize = contentLength ? parseInt(contentLength, 10) : 0;
             
             blob = await response.blob();

@@ -28,6 +28,14 @@ export async function GET(req: Request) {
 
     const responseHeaders = new Headers(response.headers);
     responseHeaders.set('Accept-Ranges', 'bytes');
+    
+    // Cloudflare / Vercel strips Content-Length during streaming.
+    // We must pass the exact size in a custom header to detect truncated downloads on the client.
+    const contentLength = response.headers.get('content-length');
+    if (contentLength) {
+      responseHeaders.set('X-Expected-Size', contentLength);
+      responseHeaders.set('Access-Control-Expose-Headers', 'X-Expected-Size');
+    }
 
     if (action === 'download') {
       responseHeaders.set('Content-Disposition', `attachment; filename="${encodeURIComponent(name)}"`);
