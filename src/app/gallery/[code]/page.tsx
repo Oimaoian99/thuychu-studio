@@ -647,6 +647,40 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         </div>
       )}
 
+    
+      {/* Modal bAo batch tải xong cho iOS */}
+      {readyToShareFiles && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
+          <div className="bg-zinc-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl relative">
+            <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check size={32} strokeWidth={3} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Đã tải xong {readyToShareFiles.length} ảnh!</h3>
+            <p className="text-zinc-400 mb-6 text-sm">
+              Bấm vào nút bên dưới, sau đó chọn <b>"Lưu {readyToShareFiles.length} hình ảnh" (Save {readyToShareFiles.length} Images)</b> để lưu tất cả vào ứng dụng Ảnh.
+            </p>
+            
+            <button
+              onClick={executeBatchShare}
+              className="w-full bg-green-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30"
+            >
+              <Download size={20} />
+              Lưu vào máy
+            </button>
+            
+            <button
+              onClick={() => {
+                setReadyToShareFiles(null);
+                setBatchProgress(null);
+              }}
+              className="w-full mt-3 py-3 text-zinc-500 font-medium hover:text-white transition-colors"
+            >
+              Hủy
+            </button>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
