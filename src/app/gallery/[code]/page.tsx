@@ -165,19 +165,30 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const handleBatchDownload = async () => {
     if (batchSelected.size === 0) return;
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
+    if (isIOS && batchSelected.size > 20) {
+      alert("Hệ điều hành iOS giới hạn bộ nhớ rất gắt gao. Vui lòng chọn tối đa 20 ảnh mỗi lần tải để tránh bị kẹt (treo) khi xử lý ảnh nhé!");
+      return;
+    }
+
     setBatchProgress({ current: 0, total: batchSelected.size });
     const filesArray: File[] = [];
     
-    // Gom tat ca anh
     const allImages = [...rawImages, ...editedImages];
     const selectedList = allImages.filter(img => batchSelected.has(img.id));
     
     for (let i = 0; i < selectedList.length; i++) {
       const img = selectedList[i];
       try {
-        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error("Fetch failed");
+        
         let blob = await response.blob();
         blob = await overwriteExifDateToNow(blob);
         
@@ -206,19 +217,21 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         console.error("Loi tai anh " + img.name, error);
       }
       setBatchProgress({ current: i + 1, total: batchSelected.size });
+      
+      // Cho Safari 1 chut thoi gian de don dep bo nho
+      await new Promise(r => setTimeout(r, 100));
     }
     
     if (isIOS && typeof navigator.share === 'function') {
+      setBatchProgress(null); // Dung spinner
       setReadyToShareFiles(filesArray);
     } else {
-      // Fallback for non-iOS or browsers that don't support sharing multiple files
-      // We trigger sequential downloads
       for (const file of filesArray) {
         const tempLink = document.createElement('a');
         tempLink.href = URL.createObjectURL(file);
         tempLink.download = file.name;
         tempLink.click();
-        await new Promise(r => setTimeout(r, 500)); // wait 500ms between downloads
+        await new Promise(r => setTimeout(r, 500));
       }
       setBatchProgress(null);
       setIsBatchDownloadMode(false);
