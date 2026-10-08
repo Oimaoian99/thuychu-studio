@@ -123,6 +123,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
   const [isBatchDownloadMode, setIsBatchDownloadMode] = useState(false);
   const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
+  const [batchErrors, setBatchErrors] = useState<{name: string, reason: string}[]>([]);
   const [readyToShareFiles, setReadyToShareFiles] = useState<File[] | null>(null);
 
   const [readyToShareFile, setReadyToShareFile] = useState<File | null>(null);
@@ -210,7 +211,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
             const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
             clearTimeout(timeoutId);
             
-            if (!response.ok) throw new Error("Fetch failed");
+            if (!response.ok) throw new Error("Fetch failed: " + response.status);
             
             const contentLength = response.headers.get('x-expected-size') || response.headers.get('content-length');
             const expectedSize = contentLength ? parseInt(contentLength, 10) : 0;
@@ -701,6 +702,16 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               <Check size={32} strokeWidth={3} />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Đã tải xong {readyToShareFiles.length} ảnh!</h3>
+            {batchErrors.length > 0 && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl mb-4 text-sm text-left max-h-32 overflow-y-auto">
+                <p className="font-bold mb-1">Thất bại {batchErrors.length} ảnh:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  {batchErrors.map((err, idx) => (
+                    <li key={idx} className="truncate">{err.name} <span className="opacity-70">({err.reason})</span></li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className="text-zinc-400 mb-6 text-sm">
               Bấm vào nút bên dưới, sau đó chọn <b>"Lưu {readyToShareFiles.length} hình ảnh" (Save {readyToShareFiles.length} Images)</b> để lưu tất cả vào ứng dụng Ảnh.
             </p>
