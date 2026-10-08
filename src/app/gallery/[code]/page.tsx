@@ -7,57 +7,49 @@ import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 
 async function overwriteExifDateToNow(blob: Blob): Promise<Blob> {
-    try {
-      // Tối ưu hóa cực lớn cho iOS: Chỉ load 128KB đầu tiên vào RAM thay vì toàn bộ ảnh 25MB
-      const chunkSize = Math.min(blob.size, 131072);
-      const chunk = blob.slice(0, chunkSize);
-      const buffer = await chunk.arrayBuffer();
-      const view = new Uint8Array(buffer);
-      
-      // Nếu không phải JPEG thì bỏ qua
-      if (view[0] !== 0xFF || view[1] !== 0xD8) return blob;
-      
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dateStr = `${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      const dateBytes = new TextEncoder().encode(dateStr);
-      
-      for (let i = 0; i < view.length - 19; i++) {
-        if (
-          view[i+4] === 58 && view[i+7] === 58 && view[i+10] === 32 && 
-          view[i+13] === 58 && view[i+16] === 58
-        ) {
-          let isDate = true;
-          for (let j = 0; j < 19; j++) {
-            if (j === 4 || j === 7 || j === 10 || j === 13 || j === 16) continue;
-            if (view[i+j] < 48 || view[i+j] > 57) {
-              isDate = false;
-              break;
-            }
+  try {
+    const chunkSize = Math.min(blob.size, 131072);
+    const chunk = blob.slice(0, chunkSize);
+    const buffer = await chunk.arrayBuffer();
+    const view = new Uint8Array(buffer);
+    
+    if (view[0] !== 0xFF || view[1] !== 0xD8) return blob;
+    
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const dateBytes = new TextEncoder().encode(dateStr);
+    
+    for (let i = 0; i < view.length - 19; i++) {
+      if (
+        view[i+4] === 58 && view[i+7] === 58 && view[i+10] === 32 && 
+        view[i+13] === 58 && view[i+16] === 58
+      ) {
+        let isDate = true;
+        for (let j = 0; j < 19; j++) {
+          if (j === 4 || j === 7 || j === 10 || j === 13 || j === 16) continue;
+          if (view[i+j] < 48 || view[i+j] > 57) {
+            isDate = false;
+            break;
           }
-          if (isDate) {
-            for (let j = 0; j < 19; j++) {
-              view[i+j] = dateBytes[j];
-            }
+        }
+        if (isDate) {
+          for (let j = 0; j < 19; j++) {
+            view[i+j] = dateBytes[j];
           }
         }
       }
-      
-      const modifiedChunk = new Blob([view], { type: blob.type });
-      
-      // Nếu file nhỏ hơn 128KB, trả về luôn chunk đã sửa
-      if (blob.size <= chunkSize) {
-        return modifiedChunk;
-      }
-      
-      // Nếu file lớn, ghép chunk 128KB đã sửa với phần còn lại của file gốc
-      const restOfBlob = blob.slice(chunkSize);
-      return new Blob([modifiedChunk, restOfBlob], { type: blob.type });
-    } catch (e) {
-      console.error("Loi khi ghi de EXIF:", e);
-      return blob; // fallback neu loi
     }
+    
+    const modifiedChunk = new Blob([view], { type: blob.type });
+    if (blob.size <= chunkSize) return modifiedChunk;
+    const restOfBlob = blob.slice(chunkSize);
+    return new Blob([modifiedChunk, restOfBlob], { type: blob.type });
+  } catch (e) {
+    console.error("Loi khi ghi de EXIF:", e);
+    return blob;
   }
+}
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -119,20 +111,12 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
 
 
 
-  
-  const [isBatchDownloadMode, setIsBatchDownloadMode] = useState(false);
-  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
-  const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
-  const [batchErrors, setBatchErrors] = useState<{name: string, reason: string}[]>([]);
-  const [readyToShareFiles, setReadyToShareFiles] = useState<File[] | null>(null);
-
   const [readyToShareFile, setReadyToShareFile] = useState<File | null>(null);
 
   const handleDownloadClick = async (e: any, img: any) => {
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     
-    if (downloadingId) { alert('Đang tải một ảnh khác, vui lòng chờ...'); return; }
     if (isIOS && typeof navigator.share === 'function') {
       e.preventDefault();
       
@@ -176,139 +160,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         setDownloadingId(null);
       }
     }
-  };
-
-  
-  const handleBatchDownload = async () => {
-    if (batchSelected.size === 0) return;
-    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    if (isIOS && batchSelected.size > 20) {
-      alert("Hệ điều hành iOS giới hạn bộ nhớ rất gắt gao. Vui lòng chọn tối đa 20 ảnh mỗi lần tải để tránh bị kẹt (treo) khi xử lý ảnh nhé!");
-      return;
-    }
-
-    setBatchProgress({ current: 0, total: batchSelected.size });
-    const filesArray: File[] = [];
-    
-    const allImages = [...rawImages, ...editedImages];
-    const selectedList = allImages.filter(img => batchSelected.has(img.id));
-    
-    for (let i = 0; i < selectedList.length; i++) {
-      const img = selectedList[i];
-      try {
-        let blob;
-        let attempts = 0;
-        let success = false;
-        
-        while (attempts < 3 && !success) {
-          attempts++;
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 90000);
-          
-          try {
-            const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) throw new Error("Fetch failed: " + response.status);
-            
-            const contentLength = response.headers.get('x-expected-size') || response.headers.get('content-length');
-            const expectedSize = contentLength ? parseInt(contentLength, 10) : 0;
-            
-            blob = await response.blob();
-            
-            if (expectedSize > 0 && blob.size < expectedSize) {
-              if (attempts < 3) {
-                console.warn(`Image ${img.name} truncated (${blob.size}/${expectedSize}), retrying...`);
-                await new Promise(r => setTimeout(r, 1000));
-                continue;
-              } else {
-                throw new Error("Truncated after 3 attempts");
-              }
-            }
-            success = true;
-          } catch (e) {
-            clearTimeout(timeoutId);
-            if (attempts >= 3) throw e;
-            await new Promise(r => setTimeout(r, 1000));
-          }
-        }
-        
-        if (!blob) throw new Error("Failed to get blob");
-        blob = await overwriteExifDateToNow(blob);
-        
-        let fileName = img.name;
-        let mimeType = img.mimeType || blob.type;
-        const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
-        
-        if (!hasExtension) {
-           if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
-           let ext = '.jpg';
-           if (mimeType === 'image/png') ext = '.png';
-           else if (mimeType === 'image/heic') ext = '.heic';
-           else if (mimeType === 'image/gif') ext = '.gif';
-           fileName += ext;
-        } else if (mimeType === 'application/octet-stream') {
-           const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-           if (ext === '.png') mimeType = 'image/png';
-           else if (ext === '.heic') mimeType = 'image/heic';
-           else if (ext === '.gif') mimeType = 'image/gif';
-           else mimeType = 'image/jpeg';
-        }
-        
-        const file = new File([blob], fileName, { type: mimeType });
-        filesArray.push(file);
-      } catch (error) {
-        console.error("Loi tai anh " + img.name, error);
-      }
-      setBatchProgress({ current: i + 1, total: batchSelected.size });
-      
-      // Cho Safari 1 chut thoi gian de don dep bo nho
-      await new Promise(r => setTimeout(r, 100));
-    }
-    
-    if (isIOS && typeof navigator.share === 'function') {
-      setBatchProgress(null); // Dung spinner
-      setReadyToShareFiles(filesArray);
-    } else {
-      for (const file of filesArray) {
-        const tempLink = document.createElement('a');
-        tempLink.href = URL.createObjectURL(file);
-        tempLink.download = file.name;
-        tempLink.click();
-        await new Promise(r => setTimeout(r, 500));
-      }
-      setBatchProgress(null);
-      setIsBatchDownloadMode(false);
-      setBatchSelected(new Set());
-    }
-  };
-
-  const executeBatchShare = async () => {
-    if (readyToShareFiles && typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          files: readyToShareFiles
-        });
-      } catch (e) {
-        console.error(e);
-      }
-      setReadyToShareFiles(null);
-      setBatchProgress(null);
-      setIsBatchDownloadMode(false);
-      setBatchSelected(new Set());
-    }
-  };
-  
-  const toggleBatchSelect = (id: string) => {
-    const newSelected = new Set(batchSelected);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setBatchSelected(newSelected);
   };
 
   const executeShare = async () => {
@@ -369,9 +220,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
       <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Đang tải thư viện ảnh</p>
     </div>
   );
-  if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p>
-          <button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button>
-</div>;
+  if (error) return <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-red-400 font-medium"><p>{error}</p><button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Về trang chủ</button></div>;
 
   const currentImages = activeTab === 'raw' ? rawImages : activeTab === 'edited' ? editedImages : videos;
 
@@ -405,12 +254,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               <h1 className="text-lg sm:text-xl font-extrabold truncate max-w-[180px] sm:max-w-md text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 font-mono">
                 {decodeURIComponent(code)}
               </h1>
-              <button 
-                onClick={() => { setIsBatchDownloadMode(!isBatchDownloadMode); setBatchSelected(new Set()); }}
-                className={`ml-2 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all ${isBatchDownloadMode ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-              >
-                {isBatchDownloadMode ? 'Hủy tải nhiều' : 'Tải nhiều'}
-              </button>
             </div>
             <div className="sm:hidden"><ThemeToggle /></div>
           </div>
@@ -505,22 +348,10 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
                     </div>
                   )}
                   
-                  
-                  {/* Checkbox for Batch Download */}
-                  {isBatchDownloadMode && !isVideo && (
-                    <div 
-                      onClick={() => toggleBatchSelect(img.id)}
-                      className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${batchSelected.has(img.id) ? 'bg-gradient-to-tr from-green-500 to-emerald-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
-                    >
-                      <Check size={20} strokeWidth={batchSelected.has(img.id) ? 3 : 2} />
-                    </div>
-                  )}
-
-                  {/* Original Checkbox for Studio Selection */}
-                  {!isBatchDownloadMode && activeTab === 'raw' && !isVideo && (
+                  {/* Checkbox siêu đẹp */}
+                  {activeTab === 'raw' && !isVideo && (
                     <div 
                       onClick={() => toggleSelect(img.id)}
-
                       className={`absolute top-4 right-4 w-10 h-10 cursor-pointer rounded-full flex items-center justify-center transition-all duration-300 z-20 backdrop-blur-md shadow-xl ${isSelected ? 'bg-gradient-to-tr from-purple-500 to-blue-500 text-white' : 'bg-black/40 border border-white/20 text-white hover:bg-black/60'}`}
                     >
                       <Check size={20} strokeWidth={isSelected ? 3 : 2} />
@@ -605,7 +436,7 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               />
             )}
             
-            {activeTab === 'raw' && !isBatchDownloadMode && (
+            {activeTab === 'raw' && (
               <button 
                 onClick={() => toggleSelect(currentImages[previewIndex].id)}
                 className={`absolute bottom-10 px-10 py-4 rounded-full text-lg font-bold shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-3 border ${selected.has(currentImages[previewIndex].id) ? 'bg-gradient-to-r from-purple-600 to-blue-600 border-transparent text-white shadow-purple-500/40' : 'bg-black/50 backdrop-blur-xl border-white/20 text-white hover:bg-black/70'}`}
@@ -618,34 +449,8 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
         </div>
       )}
 
-      
-        {/* Nút Tải nhiều Batch Download Floating Bar */}
-        {isBatchDownloadMode && (
-          <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
-            <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
-              <p className="font-medium text-sm sm:text-base text-zinc-300">
-                Đã chọn <span className="text-white font-black text-xl px-1">{batchSelected.size}</span>
-              </p>
-              <button 
-                onClick={handleBatchDownload}
-                disabled={batchProgress !== null || batchSelected.size === 0}
-                className="bg-green-500 text-white px-6 sm:px-8 py-3 rounded-full text-sm sm:text-base font-bold hover:bg-green-600 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 shadow-xl flex items-center gap-2"
-              >
-                {batchProgress ? (
-                  <>
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    {batchProgress.current} / {batchProgress.total}
-                  </>
-                ) : (
-                  <><Download size={18} /> Tải xuống</>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Nút Gửi Studio Floating Island */}
-      {activeTab === 'raw' && !isBatchDownloadMode && (
+      {/* Nút Gửi Studio Floating Island */}
+      {activeTab === 'raw' && (
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none px-4">
           <div className="pointer-events-auto bg-black/60 backdrop-blur-2xl border border-white/10 p-2 pl-6 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-6 transition-all">
             <p className="font-medium text-sm sm:text-base text-zinc-300">
@@ -688,50 +493,6 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
               className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2"
             >
               <Download size={20} /> Mở bảng Lưu ảnh
-            </button>
-          </div>
-        </div>
-      )}
-
-    
-      {/* Modal bAo batch tải xong cho iOS */}
-      {readyToShareFiles && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-          <div className="bg-zinc-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl relative">
-            <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check size={32} strokeWidth={3} />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">Đã tải xong {readyToShareFiles.length} ảnh!</h3>
-            {batchErrors.length > 0 && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl mb-4 text-sm text-left max-h-32 overflow-y-auto">
-                <p className="font-bold mb-1">Thất bại {batchErrors.length} ảnh:</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  {batchErrors.map((err, idx) => (
-                    <li key={idx} className="truncate">{err.name} <span className="opacity-70">({err.reason})</span></li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <p className="text-zinc-400 mb-6 text-sm">
-              Bấm vào nút bên dưới, sau đó chọn <b>"Lưu {readyToShareFiles.length} hình ảnh" (Save {readyToShareFiles.length} Images)</b> để lưu tất cả vào ứng dụng Ảnh.
-            </p>
-            
-            <button
-              onClick={executeBatchShare}
-              className="w-full bg-green-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30"
-            >
-              <Download size={20} />
-              Lưu vào máy
-            </button>
-            
-            <button
-              onClick={() => {
-                setReadyToShareFiles(null);
-                setBatchProgress(null);
-              }}
-              className="w-full mt-3 py-3 text-zinc-500 font-medium hover:text-white transition-colors"
-            >
-              Hủy
             </button>
           </div>
         </div>
