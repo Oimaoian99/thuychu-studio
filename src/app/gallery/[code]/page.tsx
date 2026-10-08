@@ -7,41 +7,57 @@ import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 
 async function overwriteExifDateToNow(blob: Blob): Promise<Blob> {
-  try {
-    const buffer = await blob.arrayBuffer();
-    const view = new Uint8Array(buffer);
-    
-    if (view[0] !== 0xFF || view[1] !== 0xD8) return blob;
-    
-    const scanLimit = Math.min(view.length, 131072); // scan up to 128KB
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const dateStr = `${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    const dateBytes = new TextEncoder().encode(dateStr);
-    
-    for (let i = 0; i < scanLimit - 19; i++) {
-      if (
-        view[i+4] === 58 && view[i+7] === 58 && view[i+10] === 32 && 
-        view[i+13] === 58 && view[i+16] === 58
-      ) {
-        let isDate = true;
-        for (let j = 0; j < 19; j++) {
-          if (j === 4 || j === 7 || j === 10 || j === 13 || j === 16) continue;
-          if (view[i+j] < 48 || view[i+j] > 57) {
-            isDate = false;
-            break;
+    try {
+      // Tối ưu hóa cực lớn cho iOS: Chỉ load 128KB đầu tiên vào RAM thay vì toàn bộ ảnh 25MB
+      const chunkSize = Math.min(blob.size, 131072);
+      const chunk = blob.slice(0, chunkSize);
+      const buffer = await chunk.arrayBuffer();
+      const view = new Uint8Array(buffer);
+      
+      // Nếu không phải JPEG thì bỏ qua
+      if (view[0] !== 0xFF || view[1] !== 0xD8) return blob;
+      
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dateStr = `${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const dateBytes = new TextEncoder().encode(dateStr);
+      
+      for (let i = 0; i < view.length - 19; i++) {
+        if (
+          view[i+4] === 58 && view[i+7] === 58 && view[i+10] === 32 && 
+          view[i+13] === 58 && view[i+16] === 58
+        ) {
+          let isDate = true;
+          for (let j = 0; j < 19; j++) {
+            if (j === 4 || j === 7 || j === 10 || j === 13 || j === 16) continue;
+            if (view[i+j] < 48 || view[i+j] > 57) {
+              isDate = false;
+              break;
+            }
+          }
+          if (isDate) {
+            for (let j = 0; j < 19; j++) {
+              view[i+j] = dateBytes[j];
+            }
           }
         }
-        if (isDate) {
-          view.set(dateBytes, i);
-        }
       }
+      
+      const modifiedChunk = new Blob([view], { type: blob.type });
+      
+      // Nếu file nhỏ hơn 128KB, trả về luôn chunk đã sửa
+      if (blob.size <= chunkSize) {
+        return modifiedChunk;
+      }
+      
+      // Nếu file lớn, ghép chunk 128KB đã sửa với phần còn lại của file gốc
+      const restOfBlob = blob.slice(chunkSize);
+      return new Blob([modifiedChunk, restOfBlob], { type: blob.type });
+    } catch (e) {
+      console.error("Loi khi ghi de EXIF:", e);
+      return blob; // fallback neu loi
     }
-    return new Blob([view], { type: blob.type });
-  } catch (e) {
-    return blob;
   }
-}
 
 export default function GalleryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
