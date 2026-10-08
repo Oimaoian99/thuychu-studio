@@ -120,45 +120,92 @@ export default function GalleryPage({ params }: { params: Promise<{ code: string
     if (isIOS && typeof navigator.share === 'function') {
       e.preventDefault();
       
+      if (downloadingId) { alert('Đang tải một ảnh khác, vui lòng chờ...'); return; }
+      
       try {
         setDownloadingId(img.id);
-        const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`);
-        let blob = await response.blob();
-        blob = await overwriteExifDateToNow(blob);
-        let fileName = img.name;
-          let mimeType = img.mimeType || blob.type;
-          
-          const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
-          
-          if (!hasExtension) {
-             if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
-             let ext = '.jpg';
-             if (mimeType === 'image/png') ext = '.png';
-             else if (mimeType === 'image/heic') ext = '.heic';
-             else if (mimeType === 'image/gif') ext = '.gif';
-             fileName += ext;
-          } else if (mimeType === 'application/octet-stream') {
-             const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-             if (ext === '.png') mimeType = 'image/png';
-             else if (ext === '.heic') mimeType = 'image/heic';
-             else if (ext === '.gif') mimeType = 'image/gif';
-             else mimeType = 'image/jpeg';
-          }
-          
-          const file = new File([blob], fileName, { type: mimeType });
         
-        // Thay vì gọi share ngay (sẽ bị iOS chặn vì timeout), ta lưu file lại và hiển thị nút bấm
+        let blob;
+        let attempts = 0;
+        let success = false;
+        
+        while (attempts < 5 && !success) {
+          attempts++;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 90000);
+          
+          try {
+            const response = await fetch(`/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error("Fetch failed: " + response.status);
+            
+            const contentLength = response.headers.get('x-expected-size') || response.headers.get('content-length');
+            const expectedSize = contentLength ? parseInt(contentLength, 10) : (img.size ? parseInt(img.size, 10) : 0);
+            
+            blob = await response.blob();
+            
+            if (expectedSize > 0 && blob.size < expectedSize) {
+              if (attempts < 5) {
+                console.warn(`Image ${img.name} truncated (${blob.size}/${expectedSize}), retrying...`);
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
+              } else {
+                throw new Error("Mạng quá yếu, vui lòng tải lại sau.");
+              }
+            }
+            success = true;
+          } catch (err) {
+            clearTimeout(timeoutId);
+            if (attempts >= 5) throw err;
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        
+        if (!blob) throw new Error("Không lấy được dữ liệu ảnh");
+        blob = await overwriteExifDateToNow(blob);
+        
+        let fileName = img.name;
+        let mimeType = img.mimeType || blob.type;
+        const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
+        
+        if (!hasExtension) {
+           if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
+           let ext = '.jpg';
+           if (mimeType === 'image/png') ext = '.png';
+           else if (mimeType === 'image/heic') ext = '.heic';
+           else if (mimeType === 'image/gif') ext = '.gif';
+           fileName += ext;
+        } else if (mimeType === 'application/octet-stream') {
+           const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+           if (ext === '.png') mimeType = 'image/png';
+           else if (ext === '.heic') mimeType = 'image/heic';
+           else if (ext === '.gif') mimeType = 'image/gif';
+           else mimeType = 'image/jpeg';
+        }
+        
+        const file = new File([blob], fileName, { type: mimeType });
         setReadyToShareFile(file);
       } catch (error: any) {
         console.error("Lỗi tải ảnh:", error);
-        // Fallback
-        const tempLink = document.createElement('a');
-        tempLink.href = img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
-        tempLink.download = img.name;
-        tempLink.click();
+        alert("Tải ảnh thất bại: " + (error.message || "Lỗi mạng không xác định."));
       } finally {
         setDownloadingId(null);
       }
+    } else {
+      // Non-iOS fallback
+      e.preventDefault();
+      if (downloadingId) return;
+      setDownloadingId(img.id);
+      setTimeout(() => {
+        const tempLink = document.createElement('a');
+        tempLink.href = img.downloadUrl || `/api/drive/proxy?id=${img.id}&name=${encodeURIComponent(img.name)}`;
+        tempLink.download = img.name;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+        setDownloadingId(null);
+      }, 500);
     }
   };
 

@@ -121,7 +121,7 @@ export const driveCreateFolder = async (name: string, parents: string[]) => {
   return data.id;
 };
 
-export const driveListFiles = async (query: string, fields: string = 'files(id, name, mimeType, webContentLink, thumbnailLink)') => {
+export const driveListFiles = async (query: string, fields: string = 'files(id, name, mimeType, size, webContentLink, thumbnailLink)') => {
   const token = await getAccessToken();
   const url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(query) + '&fields=' + encodeURIComponent(fields) + '&pageSize=1000&t=' + Date.now();
   const res = await fetch(url, { headers: { 'Authorization': "Bearer " + token }, cache: 'no-store' });

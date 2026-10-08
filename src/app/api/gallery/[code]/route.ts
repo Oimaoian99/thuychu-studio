@@ -17,7 +17,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       return NextResponse.json({ error: 'MÃ£ khÃ¡ch hÃ ng khÃ´ng tá»“n táº¡i' }, { status: 404 });
     }
 
-    const subfolders = await driveListFiles(`'${client.drive_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, 'files(id, name)');
+    const subfolders = await driveListFiles(`'${client.drive_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, 'files(id, name, size)');
     
     const gocFolder = subfolders?.find((f: any) => f.name?.toUpperCase().includes('GOC'));
     const suaFolder = subfolders?.find((f: any) => f.name?.toUpperCase().includes('SUA'));
@@ -35,7 +35,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
     };
 
     const fetchImagesAndSubfolders = async (parentId: string) => {
-      const files = await driveListFiles(`'${parentId}' in parents and trashed = false`, 'files(id, name, mimeType, webContentLink, thumbnailLink)');
+      const files = await driveListFiles(`'${parentId}' in parents and trashed = false`, 'files(id, name, mimeType, size, webContentLink, thumbnailLink)');
       
       const directFiles = files.filter((f: any) => f.mimeType?.includes('image/') || f.mimeType?.includes('video/'));
       const subfolders = files.filter((f: any) => f.mimeType === 'application/vnd.google-apps.folder');
@@ -44,7 +44,7 @@ export async function GET(req: Request, context: { params: Promise<{ code: strin
       
       if (subfolders.length > 0) {
         const subfolderPromises = subfolders.map(async (folder: any) => {
-          const subRes = await driveListFiles(`'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`, 'files(id, name, mimeType, webContentLink, thumbnailLink)');
+          const subRes = await driveListFiles(`'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`, 'files(id, name, mimeType, size, webContentLink, thumbnailLink)');
           return (subRes || []).map((f: any) => formatImage(f, folder.name || undefined));
         });
         
