@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   if (!clientId || !clientSecret) {
     return NextResponse.json({ 
-      error: 'Vui lòng thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET vào file .env.local trước' 
+      error: 'Vui lòng thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET vào biến môi trường.' 
     });
   }
 
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     try {
       const { tokens } = await oauth2Client.getToken(code);
       return NextResponse.json({
-        message: 'Thành công! Hãy copy đoạn REFRESH TOKEN dưới đây và dán vào file .env.local',
+        message: 'Thành công! Hãy copy đoạn REFRESH TOKEN dưới đây và dán vào biến môi trường trên Cloudflare (sau đó nhớ tạo Deployment mới):',
         GOOGLE_REFRESH_TOKEN: tokens.refresh_token
       });
     } catch (error: any) {
