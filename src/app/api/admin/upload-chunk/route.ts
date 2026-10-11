@@ -1,5 +1,7 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/lib/drive';
+
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {

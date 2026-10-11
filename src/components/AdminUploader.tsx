@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle, Image as ImageIcon, Film, Folder, ChevronRight, ChevronLeft, Download, Plus } from "lucide-react";
+import { UploadCloud, X, File as FileIcon, CheckCircle2, AlertCircle, Image as ImageIcon, Film, Folder, ChevronRight, ChevronLeft, Download, Plus, RotateCw } from "lucide-react";
 import CustomVideoPlayer from "./CustomVideoPlayer"; // Assuming we can use this
 
 interface AdminUploaderProps {
@@ -102,7 +102,7 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
 
   const uploadQueueRef = useRef<UploadingFile[]>([]);
   const activeUploadsRef = useRef(0);
-  const MAX_CONCURRENT = 3; // Tối đa 3 file up cùng lúc
+  const MAX_CONCURRENT = 2; // Giảm xuống 2 file đồng thời để tránh làm nghẽn Serverless function và Google Drive API
 
   const addFiles = (newFiles: File[]) => {
     const newUploads = newFiles.map(file => ({
@@ -130,8 +130,54 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
     }
   };
 
-  
-  const fetchWithRetry = async (url: string, options: any, retries = 5) => {
+  const handleRetryAllErrors = () => {
+    const errorItems = files.filter(f => f.status === 'error');
+    if (errorItems.length === 0) return;
+
+    setFiles(prev =>
+      prev.map(f =>
+        f.status === 'error'
+          ? { ...f, status: 'pending', progress: 0, errorMsg: undefined }
+          : f
+      )
+    );
+
+    const queuedItems: UploadingFile[] = errorItems.map(f => ({
+      ...f,
+      status: 'pending',
+      progress: 0,
+      errorMsg: undefined
+    }));
+    uploadQueueRef.current.push(...queuedItems);
+    processQueue();
+  };
+
+  const handleRetrySingle = (id: string) => {
+    const target = files.find(f => f.id === id);
+    if (!target) return;
+
+    setFiles(prev =>
+      prev.map(f =>
+        f.id === id
+          ? { ...f, status: 'pending', progress: 0, errorMsg: undefined }
+          : f
+      )
+    );
+    uploadQueueRef.current.push({
+      ...target,
+      status: 'pending',
+      progress: 0,
+      errorMsg: undefined
+    });
+    processQueue();
+  };
+
+  const fetchWithRetry = async (
+    url: string,
+    options: any,
+    retries = 6,
+    onRetry?: (attempt: number, delayMs: number) => void
+  ) => {
     for (let i = 0; i < retries; i++) {
       try {
         const res = await fetch(url, options);
@@ -139,9 +185,12 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
           throw new Error('Server error: ' + res.status);
         }
         return res;
-      } catch (err) {
+      } catch (err: any) {
         if (i === retries - 1) throw err;
-        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+        // Exponential backoff + jitter: 1.5s, 3s, 6s, 12s, 16s... + ngẫu nhiên để giãn cách
+        const delay = Math.min(1500 * Math.pow(2, i), 16000) + Math.floor(Math.random() * 1000);
+        if (onRetry) onRetry(i + 1, delay);
+        await new Promise(r => setTimeout(r, delay));
       }
     }
     throw new Error('Failed to fetch after retries');
@@ -164,11 +213,23 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         body.type = type;
       }
 
-      const sessionRes = await fetchWithRetry('/api/admin/upload-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+      const sessionRes = await fetchWithRetry(
+        '/api/admin/upload-session',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        },
+        6,
+        (attempt, delay) => {
+          updateFileStatus(
+            uploadItem.id,
+            'uploading',
+            0,
+            `Máy chủ bận, thử lại (${attempt}/6)...`
+          );
+        }
+      );
       
       const sessionData = await sessionRes.json();
       if (!sessionData.success) {
@@ -184,16 +245,29 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
         const end = Math.min(offset + CHUNK_SIZE, file.size);
         const chunk = file.slice(offset, end);
         const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
+        const currentPct = Math.round((offset / file.size) * 100);
         
-        const chunkRes = await fetchWithRetry('/api/admin/upload-chunk', {
-          method: 'POST',
-          headers: {
-            'x-upload-id': sessionData.uploadId || '',
-            'x-content-range': contentRange,
-            'Content-Type': 'application/octet-stream'
+        const chunkRes = await fetchWithRetry(
+          '/api/admin/upload-chunk',
+          {
+            method: 'POST',
+            headers: {
+              'x-upload-id': sessionData.uploadId || '',
+              'x-content-range': contentRange,
+              'Content-Type': 'application/octet-stream'
+            },
+            body: chunk
           },
-          body: chunk
-        });
+          6,
+          (attempt, delay) => {
+            updateFileStatus(
+              uploadItem.id,
+              'uploading',
+              currentPct,
+              `Máy chủ bận (503), tự thử lại (${attempt}/6)...`
+            );
+          }
+        );
         
         let chunkData: any = {};
         try {
@@ -324,8 +398,20 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
 
         {/* Danh sách File Tải lên */}
         <div className="w-full md:w-1/2 flex flex-col h-full bg-black/20">
-          <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-            <h3 className="font-bold text-white text-sm">Tiến trình tải lên</h3>
+          <div className="p-3 sm:p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-bold text-white text-sm">Tiến trình tải lên</h3>
+              {errorFiles > 0 && (
+                <button
+                  onClick={handleRetryAllErrors}
+                  className="px-2 py-0.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-lg flex items-center gap-1.5 transition-colors font-medium shadow-sm cursor-pointer"
+                  title="Thử lại các file bị lỗi"
+                >
+                  <RotateCw size={11} className="shrink-0" />
+                  Thử lại file lỗi ({errorFiles})
+                </button>
+              )}
+            </div>
             <div className="flex gap-4 text-xs font-medium">
               <span className="text-green-400">Xong: {completedFiles}</span>
               {errorFiles > 0 && <span className="text-red-400">Lỗi: {errorFiles}</span>}
@@ -355,10 +441,23 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
                         style={{ width: `${f.progress}%` }}
                       />
                     </div>
-                    {f.status === 'error' && (
-                      <p className="text-[10px] text-red-400 mt-1 truncate flex items-center gap-1">
-                        <AlertCircle size={10} /> {f.errorMsg}
+                    {f.status === 'uploading' && f.errorMsg && (
+                      <p className="text-[10px] text-amber-400 mt-1 truncate flex items-center gap-1 animate-pulse">
+                        <AlertCircle size={10} className="shrink-0" /> {f.errorMsg}
                       </p>
+                    )}
+                    {f.status === 'error' && (
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-red-400 truncate flex items-center gap-1">
+                          <AlertCircle size={10} className="shrink-0" /> {f.errorMsg}
+                        </p>
+                        <button
+                          onClick={() => handleRetrySingle(f.id)}
+                          className="text-[10px] text-purple-400 hover:text-purple-300 underline shrink-0 ml-2 font-medium cursor-pointer"
+                        >
+                          Thử lại
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
