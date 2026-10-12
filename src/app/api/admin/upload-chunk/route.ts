@@ -7,6 +7,7 @@ export async function POST(req: Request) {
   try {
     const uploadId = req.headers.get('x-upload-id');
     const contentRange = req.headers.get('x-content-range');
+    const isStatusCheck = req.headers.get('x-action') === 'check-status';
     
     if (!uploadId || !contentRange) {
       return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
@@ -15,20 +16,38 @@ export async function POST(req: Request) {
     const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=${uploadId}`;
 
     const token = await getAccessToken();
-    const chunk = await req.arrayBuffer();
+    const chunk = isStatusCheck ? null : await req.arrayBuffer();
     
-    const driveRes = await fetch(uploadUrl, {
+    const driveHeaders: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Range': contentRange
+    };
+
+    if (chunk && chunk.byteLength > 0) {
+      driveHeaders['Content-Length'] = chunk.byteLength.toString();
+    } else {
+      driveHeaders['Content-Length'] = '0';
+    }
+
+    let driveRes = await fetch(uploadUrl, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Length': chunk.byteLength.toString(),
-        'Content-Range': contentRange
-      },
-      body: chunk
+      headers: driveHeaders,
+      body: chunk && chunk.byteLength > 0 ? chunk : undefined
     });
     
+    // Nếu Google tạm bận (503 / 500) và không phải check status, thử lại 1 lần sau 1s ngay tại server
+    if ((driveRes.status === 503 || driveRes.status === 500) && !isStatusCheck) {
+      await new Promise(r => setTimeout(r, 1000));
+      driveRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: driveHeaders,
+        body: chunk && chunk.byteLength > 0 ? chunk : undefined
+      });
+    }
+
     if (driveRes.status === 308) {
-      return NextResponse.json({ success: true, status: 'incomplete' });
+      const range = driveRes.headers.get('range') || '';
+      return NextResponse.json({ success: true, status: 'incomplete', range });
     }
     
     if (driveRes.status === 200 || driveRes.status === 201) {

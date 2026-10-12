@@ -102,7 +102,7 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
 
   const uploadQueueRef = useRef<UploadingFile[]>([]);
   const activeUploadsRef = useRef(0);
-  const MAX_CONCURRENT = 2; // Giảm xuống 2 file đồng thời để tránh làm nghẽn Serverless function và Google Drive API
+  const MAX_CONCURRENT = 3; // 3 file song song để tối ưu tốc độ
 
   const addFiles = (newFiles: File[]) => {
     const newUploads = newFiles.map(file => ({
@@ -237,56 +237,132 @@ export default function AdminUploader({ folderId, type, onClose }: AdminUploader
       }
 
       const file = uploadItem.file;
-      const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB per chunk (phải là bội số của 256KB)
+      const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB per chunk (bội số của 256KB: 16 * 256KB) để tối đa tốc độ
       let offset = 0;
       let finalData = null;
 
       while (offset < file.size) {
-        const end = Math.min(offset + CHUNK_SIZE, file.size);
-        const chunk = file.slice(offset, end);
-        const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
+        // Căn chỉnh byte: các chunk không phải cuối cùng phải là bội số của 256KB
+        const rawEnd = Math.min(offset + CHUNK_SIZE, file.size);
+        const end = rawEnd === file.size
+          ? rawEnd
+          : offset + Math.floor((rawEnd - offset) / (256 * 1024)) * (256 * 1024);
+
         const currentPct = Math.round((offset / file.size) * 100);
-        
-        const chunkRes = await fetchWithRetry(
-          '/api/admin/upload-chunk',
-          {
-            method: 'POST',
-            headers: {
-              'x-upload-id': sessionData.uploadId || '',
-              'x-content-range': contentRange,
-              'Content-Type': 'application/octet-stream'
-            },
-            body: chunk
-          },
-          6,
-          (attempt, delay) => {
+        let chunkSuccess = false;
+        let lastErrorMsg = '';
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            if (attempt > 0) {
+              // Khi có lỗi/thử lại: TRUY VẤN VỊ TRÍ BYTE THỰC TẾ ĐÃ NHẬN TRÊN GOOGLE DRIVE ĐỂ TRÁNH LỆCH OFFSET (503)
+              updateFileStatus(
+                uploadItem.id,
+                'uploading',
+                currentPct,
+                `Đồng bộ trạng thái byte với Google (${attempt}/5)...`
+              );
+
+              try {
+                const checkRes = await fetch('/api/admin/upload-chunk', {
+                  method: 'POST',
+                  headers: {
+                    'x-upload-id': sessionData.uploadId || '',
+                    'x-content-range': `bytes */${file.size}`,
+                    'x-action': 'check-status'
+                  }
+                });
+
+                if (checkRes.ok) {
+                  const checkData = await checkRes.json();
+                  if (checkData.status === 'complete' && checkData.data) {
+                    finalData = checkData.data;
+                    offset = file.size;
+                    chunkSuccess = true;
+                    break;
+                  }
+                  if (checkData.status === 'incomplete' && checkData.range) {
+                    // range: "bytes=0-4194303"
+                    const match = checkData.range.match(/bytes=0-(\d+)/);
+                    if (match) {
+                      const serverReceived = parseInt(match[1], 10) + 1;
+                      if (serverReceived > offset) {
+                        // Google đã nhận xa hơn! Nhảy offset tới vị trí thực tế
+                        offset = serverReceived;
+                        chunkSuccess = true; // Thoát vòng lặp retry để vòng while ngoài cắt chunk mới
+                        break;
+                      }
+                    }
+                  }
+                }
+              } catch (checkErr) {
+                console.warn("Status check hiccup:", checkErr);
+              }
+
+              // Giãn cách ngắn nhẹ (1s, 2s, 4s...)
+              const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000) + Math.floor(Math.random() * 500);
+              await new Promise(r => setTimeout(r, delay));
+            }
+
+            // Gửi dữ liệu chunk
+            const chunk = file.slice(offset, end);
+            const contentRange = `bytes ${offset}-${end - 1}/${file.size}`;
+
+            const chunkRes = await fetch('/api/admin/upload-chunk', {
+              method: 'POST',
+              headers: {
+                'x-upload-id': sessionData.uploadId || '',
+                'x-content-range': contentRange,
+                'Content-Type': 'application/octet-stream'
+              },
+              body: chunk
+            });
+
+            let chunkData: any = {};
+            try {
+              chunkData = await chunkRes.json();
+            } catch (e) {}
+
+            if (chunkRes.status === 308 || chunkData.status === 'incomplete') {
+              if (chunkData.range) {
+                const match = chunkData.range.match(/bytes=0-(\d+)/);
+                if (match) {
+                  offset = parseInt(match[1], 10) + 1;
+                } else {
+                  offset = end;
+                }
+              } else {
+                offset = end;
+              }
+              chunkSuccess = true;
+              const percentComplete = Math.round((offset / file.size) * 100);
+              updateFileStatus(uploadItem.id, 'uploading', percentComplete);
+              break;
+            }
+
+            if (chunkRes.status === 200 || chunkRes.status === 201 || chunkData.status === 'complete') {
+              finalData = chunkData.data;
+              offset = file.size;
+              chunkSuccess = true;
+              updateFileStatus(uploadItem.id, 'uploading', 100);
+              break;
+            }
+
+            lastErrorMsg = chunkData.error || `HTTP ${chunkRes.status}`;
             updateFileStatus(
               uploadItem.id,
               'uploading',
               currentPct,
-              `Máy chủ bận (503), tự thử lại (${attempt}/6)...`
+              `Máy chủ bận (${chunkRes.status}), tự thử lại (${attempt + 1}/5)...`
             );
+          } catch (err: any) {
+            lastErrorMsg = err.message || 'Mất kết nối mạng';
           }
-        );
-        
-        let chunkData: any = {};
-        try {
-          chunkData = await chunkRes.json();
-        } catch (e) {}
+        }
 
-        if (!chunkRes.ok || chunkData.error) {
-          throw new Error(chunkData.error || `Lỗi up chunk: ${chunkRes.status}`);
+        if (!chunkSuccess && offset < file.size) {
+          throw new Error(lastErrorMsg || "Không thể tải lên mảnh dữ liệu sau 5 lần thử");
         }
-        
-        const percentComplete = Math.round((end / file.size) * 100);
-        updateFileStatus(uploadItem.id, 'uploading', percentComplete);
-        
-        if (chunkData.status === 'complete') {
-          finalData = chunkData.data;
-          break;
-        }
-        
-        offset = end;
       }
 
       if (finalData && finalData.id) {
